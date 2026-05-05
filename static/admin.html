@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HomeHub Admin</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="admin-body" data-theme="day" data-accent="amber" data-layout="cozy" data-background="sunrise">
+    <div class="page-shell wide-shell">
+      <header class="hero">
+        <p class="eyebrow">HomeHub Admin</p>
+        <h1 id="admin-heading">Manage your homepage from a separate backend page.</h1>
+        <p class="hero-copy" id="admin-copy">
+          Sign in here, update your saved links, then use the main page as your browser home.
+        </p>
+      </header>
+
+      <main class="grid">
+        <section class="panel auth-panel" id="auth-panel">
+          <div class="panel-head">
+            <div>
+              <h2>Sign in</h2>
+              <p>Use one account to keep your links private.</p>
+            </div>
+            <p class="pill hidden" id="registration-pill">Registration closed</p>
+          </div>
+
+          <div class="tabs">
+            <button class="tab active" data-mode="login" type="button">Login</button>
+            <button class="tab" data-mode="register" type="button" id="register-tab">Register</button>
+          </div>
+
+          <form id="auth-form" class="stack">
+            <label>
+              <span>Email</span>
+              <input id="email" type="email" placeholder="you@example.com" required />
+            </label>
+            <label>
+              <span>Password</span>
+              <input id="password" type="password" placeholder="At least 8 characters" required />
+            </label>
+            <button class="primary-button" id="auth-submit" type="submit">Login</button>
+          </form>
+          <div class="oauth-panel">
+            <p class="eyebrow">Or continue with</p>
+            <div id="oauth-login-list" class="card-actions"></div>
+          </div>
+          <p id="auth-message" class="message" aria-live="polite"></p>
+        </section>
+
+        <section class="panel dashboard hidden" id="dashboard">
+          <div class="dashboard-head">
+            <div>
+              <p class="eyebrow">Personal Backend</p>
+              <h2 id="welcome-title">Welcome back</h2>
+              <p class="meta">Manage links and customize how your homepage feels.</p>
+            </div>
+            <div class="stack-actions">
+              <a class="secondary-link" href="/">Open navigation page</a>
+              <a class="secondary-link hidden" id="site-admin-link" href="/site-admin">Open site admin</a>
+              <button class="secondary-button" id="logout-button" type="button">Logout</button>
+            </div>
+          </div>
+
+          <div class="panel-grid">
+            <section class="panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Links</p>
+                  <h3>Personal links</h3>
+                </div>
+              </div>
+
+              <div class="toolbar">
+                <input id="search" type="search" placeholder="Search your links" />
+              </div>
+
+              <form id="link-form" class="link-form">
+                <input id="link-id" type="hidden" />
+                <input id="link-icon-url" type="hidden" />
+                <input id="link-icon-mode" type="hidden" value="favicon" />
+                <label>
+                  <span>Title</span>
+                  <input id="link-title" type="text" placeholder="GitHub" required />
+                </label>
+                <label>
+                  <span>URL</span>
+                  <input id="link-url" type="url" placeholder="https://github.com" required />
+                </label>
+                <label class="wide">
+                  <span>Description</span>
+                  <input id="link-description" type="text" placeholder="Code, issues, pull requests" />
+                </label>
+                <label class="wide">
+                  <span>Custom icon image (optional)</span>
+                  <input id="link-icon-file" type="file" accept="image/*" />
+                </label>
+                <p class="message wide" id="link-icon-message">If you do not upload an image, the site favicon will be used automatically.</p>
+                <button class="primary-button" id="link-submit" type="submit">Add link</button>
+              </form>
+
+              <p id="dashboard-message" class="message" aria-live="polite"></p>
+              <div id="link-list" class="link-list"></div>
+            </section>
+
+            <section class="panel">
+              <div class="section-head">
+                <div>
+                  <p class="eyebrow">Settings</p>
+                  <h3>Your page settings</h3>
+                  <p>Choose the theme, page text, layout, and tab title for your own homepage.</p>
+                </div>
+              </div>
+
+              <div class="oauth-panel">
+                <p class="eyebrow">Connected Logins</p>
+                <div id="oauth-link-list" class="card-actions"></div>
+                <p id="oauth-link-message" class="message">Link a provider so you can sign in without a password next time.</p>
+              </div>
+
+              <form id="settings-form" class="settings-form">
+                <label>
+                  <span>Theme</span>
+                  <select id="theme">
+                    <option value="day">Day</option>
+                    <option value="night">Night</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Accent color</span>
+                  <select id="accent">
+                    <option value="amber">Amber</option>
+                    <option value="cyan">Cyan</option>
+                    <option value="pink">Pink</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Layout density</span>
+                  <select id="layout">
+                    <option value="cozy">Cozy</option>
+                    <option value="compact">Compact</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Background</span>
+                  <select id="background">
+                    <option value="sunrise">Sunrise</option>
+                    <option value="paper">Paper</option>
+                    <option value="aurora">Aurora</option>
+                    <option value="midnight">Midnight</option>
+                    <option value="custom">Custom image</option>
+                  </select>
+                </label>
+                <label class="wide">
+                  <span>Custom background image</span>
+                  <input id="background-file" type="file" accept="image/*" />
+                </label>
+                <p id="background-upload-message" class="message wide">Pick an image to preview it instantly, then save settings to upload it.</p>
+                <label class="wide">
+                  <span>Browser tab title</span>
+                  <input id="tab-title" type="text" placeholder="My HomeHub" required />
+                </label>
+                <label class="wide">
+                  <span>Admin page heading</span>
+                  <input id="settings-admin-heading" type="text" required />
+                </label>
+                <label class="wide">
+                  <span>Admin page intro text</span>
+                  <textarea id="settings-admin-copy" required></textarea>
+                </label>
+                <label class="wide">
+                  <span>Navigation page heading</span>
+                  <input id="settings-nav-heading" type="text" required />
+                </label>
+                <label class="wide">
+                  <span>Navigation page intro text</span>
+                  <textarea id="settings-nav-copy" required></textarea>
+                </label>
+                <button class="primary-button" type="submit">Save settings</button>
+              </form>
+              <p id="settings-message" class="message" aria-live="polite"></p>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/admin.js"></script>
+  </body>
+</html>

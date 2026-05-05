@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HomeHub Navigation</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body class="nav-body" data-theme="day" data-accent="amber" data-layout="cozy" data-background="sunrise">
+    <div class="page-shell nav-shell">
+      <header class="nav-hero">
+        <div class="hero">
+          <p class="eyebrow" id="nav-eyebrow">HomeHub</p>
+          <h1 id="nav-heading">Open what matters, right from your start page.</h1>
+          <p class="hero-copy" id="nav-copy">
+            This is your personal navigation page. Keep it fast, visual, and focused on the sites you use every day.
+          </p>
+        </div>
+        <div class="stack-actions">
+          <a class="secondary-link" href="/admin">Open backend</a>
+          <button class="secondary-button" id="logout-button" type="button">Logout</button>
+        </div>
+      </header>
+
+      <main class="panel nav-panel">
+        <div class="nav-toolbar">
+          <input id="search" type="search" placeholder="Search your links" />
+        </div>
+        <p id="nav-message" class="message" aria-live="polite"></p>
+        <section id="tile-grid" class="tile-grid"></section>
+        <section class="panel quick-panel">
+          <p class="eyebrow">Quick Note</p>
+          <h2>Use the backend for changes.</h2>
+          <p class="hero-copy">
+            Open <a href="/admin">your backend page</a> when you want to edit links or update the look and text of this homepage.
+          </p>
+        </section>
+      </main>
+    </div>
+
+    <script src="/static/nav.js"></script>
+  </body>
+</html>
