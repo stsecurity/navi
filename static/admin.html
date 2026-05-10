@@ -76,7 +76,7 @@
                 <input id="search" type="search" placeholder="Search your links" />
               </div>
 
-              <form id="link-form" class="link-form">
+              <form id="link-form" class="link-form link-editor">
                 <input id="link-id" type="hidden" />
                 <input id="link-icon-url" type="hidden" />
                 <input id="link-icon-mode" type="hidden" value="favicon" />
@@ -97,7 +97,10 @@
                   <input id="link-icon-file" type="file" accept="image/*" />
                 </label>
                 <p class="message wide" id="link-icon-message">If you do not upload an image, the site favicon will be used automatically.</p>
-                <button class="primary-button" id="link-submit" type="submit">Add link</button>
+                <div class="form-actions wide">
+                  <button class="primary-button" id="link-submit" type="submit">Add link</button>
+                  <button class="ghost-button hidden" id="link-cancel" type="button">Cancel edit</button>
+                </div>
               </form>
 
               <p id="dashboard-message" class="message" aria-live="polite"></p>

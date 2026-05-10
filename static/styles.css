@@ -450,6 +450,32 @@ textarea {
   margin: 22px 0 18px;
 }
 
+.link-editor {
+  margin-top: 18px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.42);
+}
+
+body[data-theme="night"] .link-editor {
+  background: rgba(15, 23, 36, 0.42);
+}
+
+.link-editor.editing,
+.link-card.editing {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft), var(--tile-shadow);
+}
+
+.link-card.editing {
+  background: linear-gradient(160deg, var(--panel-strong), rgba(255, 255, 255, 0.72));
+}
+
+body[data-theme="night"] .link-card.editing {
+  background: linear-gradient(160deg, var(--panel-strong), rgba(22, 31, 48, 0.96));
+}
+
 .link-form,
 .settings-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));

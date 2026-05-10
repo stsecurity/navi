@@ -20,6 +20,7 @@ const settingsMessage = document.getElementById("settings-message");
 const authSubmit = document.getElementById("auth-submit");
 const welcomeTitle = document.getElementById("welcome-title");
 const linkForm = document.getElementById("link-form");
+const linkCancel = document.getElementById("link-cancel");
 const linkList = document.getElementById("link-list");
 const searchInput = document.getElementById("search");
 const settingsForm = document.getElementById("settings-form");
@@ -101,6 +102,12 @@ linkForm.addEventListener("submit", async (event) => {
   resetLinkForm();
   dashboardMessage.textContent = id ? "Link updated." : "Link added.";
   await loadLinks();
+});
+
+linkCancel.addEventListener("click", () => {
+  resetLinkForm();
+  dashboardMessage.textContent = "";
+  renderLinks();
 });
 
 settingsForm.addEventListener("submit", async (event) => {
@@ -275,7 +282,7 @@ function renderLinks() {
   linkList.innerHTML = filtered
     .map(
       (link) => `
-        <article class="link-card">
+        <article class="link-card ${document.getElementById("link-id").value === String(link.id) ? "editing" : ""}">
           <div class="card-title-row">
             <div class="tile-icon-wrap small">
               <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" data-fallback="${escapeAttribute(initials(link.title))}" />
@@ -356,11 +363,15 @@ function startEdit(id) {
   document.getElementById("link-icon-mode").value = link.icon_mode || "favicon";
   document.getElementById("link-icon-file").value = "";
   document.getElementById("link-submit").textContent = "Save changes";
+  linkCancel.classList.remove("hidden");
+  linkForm.classList.add("editing");
   document.getElementById("link-icon-message").textContent =
     link.icon_mode === "custom"
       ? "This link is using a custom icon. Upload a new one to replace it, or leave the field empty to keep it."
       : "This link is using the site favicon. Upload an image only if you want to override it.";
   dashboardMessage.textContent = "Editing link.";
+  renderLinks();
+  linkForm.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function resetLinkForm() {
@@ -369,6 +380,8 @@ function resetLinkForm() {
   document.getElementById("link-icon-url").value = "";
   document.getElementById("link-icon-mode").value = "favicon";
   document.getElementById("link-submit").textContent = "Add link";
+  linkCancel.classList.add("hidden");
+  linkForm.classList.remove("editing");
   document.getElementById("link-icon-message").textContent = "If you do not upload an image, the site favicon will be used automatically.";
 }
 

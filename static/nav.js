@@ -68,7 +68,6 @@ function renderLinks() {
               <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
             </div>
             <div>
-              <p class="eyebrow">Quick Link</p>
               <h2>${escapeHtml(link.title)}</h2>
             </div>
           </div>
