@@ -23,6 +23,10 @@ document.getElementById("default-theme").addEventListener("change", () => {
   syncBackgroundOptions("default-theme", "default-background");
 });
 
+document.querySelectorAll("[data-site-tab]").forEach((button) => {
+  button.addEventListener("click", () => setSiteTab(button.dataset.siteTab));
+});
+
 siteConfigForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = {
@@ -111,6 +115,15 @@ defaultLinkForm.addEventListener("submit", async (event) => {
   message("default-link-message", "Default link added.");
   await loadDefaultLinks();
 });
+
+function setSiteTab(tabName) {
+  document.querySelectorAll("[data-site-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.siteTab === tabName);
+  });
+  document.querySelectorAll("[data-site-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.sitePanel === tabName);
+  });
+}
 
 async function init() {
   const [config, personal] = await Promise.all([

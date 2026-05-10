@@ -30,150 +30,168 @@
             <p class="pill" id="registration-status-pill">Registration open</p>
           </div>
 
-          <form id="site-config-form" class="settings-form">
-            <label class="wide">
-              <span>Site title</span>
-              <input id="site-title" type="text" required />
-            </label>
-            <label class="wide">
-              <span>External base URL</span>
-              <input id="external-base-url" type="url" placeholder="https://homehub.example.com" />
-            </label>
-            <label class="wide">
-              <span>Allow new registrations</span>
-              <select id="registration-open">
-                <option value="true">Open</option>
-                <option value="false">Closed</option>
-              </select>
-            </label>
-            <label>
-              <span>Default theme</span>
-              <select id="default-theme">
-                <option value="day">Day</option>
-                <option value="night">Night</option>
-              </select>
-            </label>
-            <label>
-              <span>Default accent</span>
-              <select id="default-accent">
-                <option value="amber">Amber</option>
-                <option value="cyan">Cyan</option>
-                <option value="pink">Pink</option>
-              </select>
-            </label>
-            <label>
-              <span>Default layout</span>
-              <select id="default-layout">
-                <option value="cozy">Cozy</option>
-                <option value="compact">Compact</option>
-              </select>
-            </label>
-            <label>
-              <span>Default background</span>
-              <select id="default-background">
-                <option value="sunrise">Sunrise</option>
-                <option value="paper">Paper</option>
-                <option value="aurora">Aurora</option>
-                <option value="midnight">Midnight</option>
-              </select>
-            </label>
-            <label class="wide">
-              <span>S3 endpoint URL</span>
-              <input id="s3-endpoint-url" type="url" placeholder="https://s3.example.com" />
-            </label>
-            <label>
-              <span>S3 region</span>
-              <input id="s3-region" type="text" placeholder="us-east-1" />
-            </label>
-            <label>
-              <span>S3 bucket</span>
-              <input id="s3-bucket" type="text" placeholder="homehub-assets" />
-            </label>
-            <label>
-              <span>S3 access key ID</span>
-              <input id="s3-access-key-id" type="text" />
-            </label>
-            <label>
-              <span>S3 secret access key</span>
-              <input id="s3-secret-access-key" type="password" />
-            </label>
-            <label class="wide">
-              <span>Public base URL</span>
-              <input id="s3-public-base-url" type="url" placeholder="https://cdn.example.com/homehub" />
-            </label>
-            <label class="wide">
-              <span>Key prefix</span>
-              <input id="s3-key-prefix" type="text" placeholder="homehub" />
-            </label>
-            <label class="wide">
-              <span>Google client ID</span>
-              <input id="oauth-google-client-id" type="text" />
-            </label>
-            <label class="wide">
-              <span>Google client secret</span>
-              <input id="oauth-google-client-secret" type="password" />
-            </label>
-            <label class="wide">
-              <span>Enable Google login</span>
-              <select id="oauth-google-enabled">
-                <option value="false">Disabled</option>
-                <option value="true">Enabled</option>
-              </select>
-            </label>
-            <label class="wide">
-              <span>GitHub client ID</span>
-              <input id="oauth-github-client-id" type="text" />
-            </label>
-            <label class="wide">
-              <span>GitHub client secret</span>
-              <input id="oauth-github-client-secret" type="password" />
-            </label>
-            <label class="wide">
-              <span>Enable GitHub login</span>
-              <select id="oauth-github-enabled">
-                <option value="false">Disabled</option>
-                <option value="true">Enabled</option>
-              </select>
-            </label>
-            <label class="wide">
-              <span>Nextcloud base URL</span>
-              <input id="oauth-nextcloud-base-url" type="url" placeholder="https://cloud.example.com" />
-            </label>
-            <label class="wide">
-              <span>Nextcloud client ID</span>
-              <input id="oauth-nextcloud-client-id" type="text" />
-            </label>
-            <label class="wide">
-              <span>Nextcloud client secret</span>
-              <input id="oauth-nextcloud-client-secret" type="password" />
-            </label>
-            <label class="wide">
-              <span>Enable Nextcloud login</span>
-              <select id="oauth-nextcloud-enabled">
-                <option value="false">Disabled</option>
-                <option value="true">Enabled</option>
-              </select>
-            </label>
-            <label class="wide">
-              <span>Default browser tab title</span>
-              <input id="default-tab-title" type="text" required />
-            </label>
-            <label class="wide">
-              <span>Default admin heading</span>
-              <input id="default-admin-heading" type="text" required />
-            </label>
-            <label class="wide">
-              <span>Default admin intro text</span>
-              <textarea id="default-admin-copy" required></textarea>
-            </label>
-            <label class="wide">
-              <span>Default navigation heading</span>
-              <input id="default-nav-heading" type="text" required />
-            </label>
-            <label class="wide">
-              <span>Default navigation intro text</span>
-              <textarea id="default-nav-copy" required></textarea>
-            </label>
+          <form id="site-config-form" class="settings-form site-settings-form">
+            <div class="tabs site-settings-tabs" role="tablist" aria-label="Site settings categories">
+              <button class="tab active" type="button" data-site-tab="general">General</button>
+              <button class="tab" type="button" data-site-tab="defaults">Defaults</button>
+              <button class="tab" type="button" data-site-tab="s3">S3</button>
+              <button class="tab" type="button" data-site-tab="oauth">OAuth</button>
+            </div>
+
+            <div class="site-tab-panel active" data-site-panel="general">
+              <label class="wide">
+                <span>Site title</span>
+                <input id="site-title" type="text" required />
+              </label>
+              <label class="wide">
+                <span>External base URL</span>
+                <input id="external-base-url" type="url" placeholder="https://homehub.example.com" />
+              </label>
+              <label class="wide">
+                <span>Allow new registrations</span>
+                <select id="registration-open">
+                  <option value="true">Open</option>
+                  <option value="false">Closed</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="site-tab-panel" data-site-panel="defaults">
+              <label>
+                <span>Default theme</span>
+                <select id="default-theme">
+                  <option value="day">Day</option>
+                  <option value="night">Night</option>
+                </select>
+              </label>
+              <label>
+                <span>Default accent</span>
+                <select id="default-accent">
+                  <option value="amber">Amber</option>
+                  <option value="cyan">Cyan</option>
+                  <option value="pink">Pink</option>
+                </select>
+              </label>
+              <label>
+                <span>Default layout</span>
+                <select id="default-layout">
+                  <option value="cozy">Cozy</option>
+                  <option value="compact">Compact</option>
+                </select>
+              </label>
+              <label>
+                <span>Default background</span>
+                <select id="default-background">
+                  <option value="sunrise">Sunrise</option>
+                  <option value="paper">Paper</option>
+                  <option value="aurora">Aurora</option>
+                  <option value="midnight">Midnight</option>
+                </select>
+              </label>
+              <label class="wide">
+                <span>Default browser tab title</span>
+                <input id="default-tab-title" type="text" required />
+              </label>
+              <label class="wide">
+                <span>Default admin heading</span>
+                <input id="default-admin-heading" type="text" required />
+              </label>
+              <label class="wide">
+                <span>Default admin intro text</span>
+                <textarea id="default-admin-copy" required></textarea>
+              </label>
+              <label class="wide">
+                <span>Default navigation heading</span>
+                <input id="default-nav-heading" type="text" required />
+              </label>
+              <label class="wide">
+                <span>Default navigation intro text</span>
+                <textarea id="default-nav-copy" required></textarea>
+              </label>
+            </div>
+
+            <div class="site-tab-panel" data-site-panel="s3">
+              <label class="wide">
+                <span>S3 endpoint URL</span>
+                <input id="s3-endpoint-url" type="url" placeholder="https://s3.example.com" />
+              </label>
+              <label>
+                <span>S3 region</span>
+                <input id="s3-region" type="text" placeholder="us-east-1" />
+              </label>
+              <label>
+                <span>S3 bucket</span>
+                <input id="s3-bucket" type="text" placeholder="homehub-assets" />
+              </label>
+              <label>
+                <span>S3 access key ID</span>
+                <input id="s3-access-key-id" type="text" />
+              </label>
+              <label>
+                <span>S3 secret access key</span>
+                <input id="s3-secret-access-key" type="password" />
+              </label>
+              <label class="wide">
+                <span>Public base URL</span>
+                <input id="s3-public-base-url" type="url" placeholder="https://cdn.example.com/homehub" />
+              </label>
+              <label class="wide">
+                <span>Key prefix</span>
+                <input id="s3-key-prefix" type="text" placeholder="homehub" />
+              </label>
+            </div>
+
+            <div class="site-tab-panel" data-site-panel="oauth">
+              <label class="wide">
+                <span>Google client ID</span>
+                <input id="oauth-google-client-id" type="text" />
+              </label>
+              <label class="wide">
+                <span>Google client secret</span>
+                <input id="oauth-google-client-secret" type="password" />
+              </label>
+              <label class="wide">
+                <span>Enable Google login</span>
+                <select id="oauth-google-enabled">
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </label>
+              <label class="wide">
+                <span>GitHub client ID</span>
+                <input id="oauth-github-client-id" type="text" />
+              </label>
+              <label class="wide">
+                <span>GitHub client secret</span>
+                <input id="oauth-github-client-secret" type="password" />
+              </label>
+              <label class="wide">
+                <span>Enable GitHub login</span>
+                <select id="oauth-github-enabled">
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </label>
+              <label class="wide">
+                <span>Nextcloud base URL</span>
+                <input id="oauth-nextcloud-base-url" type="url" placeholder="https://cloud.example.com" />
+              </label>
+              <label class="wide">
+                <span>Nextcloud client ID</span>
+                <input id="oauth-nextcloud-client-id" type="text" />
+              </label>
+              <label class="wide">
+                <span>Nextcloud client secret</span>
+                <input id="oauth-nextcloud-client-secret" type="password" />
+              </label>
+              <label class="wide">
+                <span>Enable Nextcloud login</span>
+                <select id="oauth-nextcloud-enabled">
+                  <option value="false">Disabled</option>
+                  <option value="true">Enabled</option>
+                </select>
+              </label>
+            </div>
             <button class="primary-button" type="submit">Save site settings</button>
           </form>
           <p id="site-config-message" class="message" aria-live="polite"></p>

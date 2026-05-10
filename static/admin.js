@@ -287,7 +287,7 @@ function renderLinks() {
               <p>${escapeHtml(link.description || "No description yet.")}</p>
               </div>
             </div>
-            <div class="card-actions">
+            <div class="card-actions link-card-actions">
               <button class="secondary-button" type="button" data-action="edit" data-id="${link.id}">Edit</button>
               <button class="secondary-button" type="button" data-action="reset-icon" data-id="${link.id}">Reset icon</button>
               <button class="ghost-button" type="button" data-action="delete" data-id="${link.id}">Delete</button>
