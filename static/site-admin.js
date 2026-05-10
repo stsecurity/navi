@@ -3,6 +3,7 @@ const state = {
   personalSettings: null,
   accounts: [],
   defaultLinks: [],
+  uploadEnabled: false,
 };
 const backgroundChoices = {
   day: [
@@ -18,6 +19,7 @@ const backgroundChoices = {
 const siteConfigForm = document.getElementById("site-config-form");
 const accountForm = document.getElementById("account-form");
 const defaultLinkForm = document.getElementById("default-link-form");
+const defaultLinkCancel = document.getElementById("default-link-cancel");
 
 document.getElementById("default-theme").addEventListener("change", () => {
   syncBackgroundOptions("default-theme", "default-background");
@@ -79,6 +81,7 @@ siteConfigForm.addEventListener("submit", async (event) => {
     return;
   }
   state.config = result.config;
+  state.uploadEnabled = s3UploadEnabled(result.config.s3_settings);
   applyConfig(result.config);
   message("site-config-message", "Site settings saved.");
 });
@@ -101,19 +104,37 @@ accountForm.addEventListener("submit", async (event) => {
 
 defaultLinkForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const uploadedIcon = await uploadOptionalFile("icon", "default-link-icon-file", "default-link-icon-message");
+  if (uploadedIcon && !uploadedIcon.ok) {
+    return;
+  }
+  if (uploadedIcon && uploadedIcon.url) {
+    document.getElementById("default-link-icon-url").value = uploadedIcon.url;
+    document.getElementById("default-link-icon-mode").value = "custom";
+  }
+  const id = document.getElementById("default-link-id").value;
   const payload = {
     title: document.getElementById("default-link-title").value.trim(),
     url: document.getElementById("default-link-url").value.trim(),
     description: document.getElementById("default-link-description").value.trim(),
+    icon_url: document.getElementById("default-link-icon-url").value.trim(),
+    icon_mode: document.getElementById("default-link-icon-mode").value || "favicon",
   };
-  const result = await api("/api/site-admin/default-links", "POST", payload);
+  const endpoint = id ? `/api/site-admin/default-links/${id}` : "/api/site-admin/default-links";
+  const method = id ? "PUT" : "POST";
+  const result = await api(endpoint, method, payload);
   if (!result.ok) {
     message("default-link-message", result.error);
     return;
   }
-  defaultLinkForm.reset();
-  message("default-link-message", "Default link added.");
+  resetDefaultLinkForm();
+  message("default-link-message", id ? "Default link updated." : "Default link added.");
   await loadDefaultLinks();
+});
+
+defaultLinkCancel.addEventListener("click", () => {
+  resetDefaultLinkForm();
+  message("default-link-message", "");
 });
 
 function setSiteTab(tabName) {
@@ -136,6 +157,7 @@ async function init() {
   }
   state.config = config.config;
   state.personalSettings = personal.settings;
+  state.uploadEnabled = s3UploadEnabled(config.config.s3_settings);
   applyPersonalSettings(personal.settings, config.config.site_title);
   applyConfig(config.config);
   await Promise.all([loadAccounts(), loadDefaultLinks()]);
@@ -290,11 +312,23 @@ function renderDefaultLinks() {
       (link) => `
         <article class="default-link-card">
           <div class="default-link-head">
-            <div>
-              <h3>${escapeHtml(link.title)}</h3>
-              <p>${escapeHtml(link.description || "No description yet.")}</p>
+            <div class="card-title-row">
+              <div class="tile-icon-wrap small">
+                <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" />
+                <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
+              </div>
+              <div>
+                <h3>${escapeHtml(link.title)}</h3>
+                <p>${escapeHtml(link.description || "No description yet.")}</p>
+              </div>
             </div>
             <div class="card-actions">
+              <button class="secondary-button" type="button" data-action="edit-default-link" data-id="${link.id}">Edit</button>
+              <label class="secondary-button file-button">
+                Change icon
+                <input class="visually-hidden" type="file" accept="image/*" data-action="change-default-icon" data-id="${link.id}" />
+              </label>
+              <button class="secondary-button" type="button" data-action="reset-default-icon" data-id="${link.id}">Reset icon</button>
               <button class="ghost-button" type="button" data-action="delete-default-link" data-id="${link.id}">Delete</button>
             </div>
           </div>
@@ -303,6 +337,62 @@ function renderDefaultLinks() {
       `
     )
     .join("");
+
+  bindIconFallbacks(list);
+
+  list.querySelectorAll("button[data-action='edit-default-link']").forEach((button) => {
+    button.addEventListener("click", () => startDefaultLinkEdit(Number(button.dataset.id)));
+  });
+
+  list.querySelectorAll("input[data-action='change-default-icon']").forEach((input) => {
+    input.addEventListener("change", async () => {
+      const link = state.defaultLinks.find((item) => item.id === Number(input.dataset.id));
+      if (!link || !input.files[0]) {
+        return;
+      }
+      const uploadedIcon = await uploadOptionalFile("icon", input, "default-link-message");
+      if (!uploadedIcon || !uploadedIcon.ok) {
+        input.value = "";
+        return;
+      }
+      const result = await api(`/api/site-admin/default-links/${input.dataset.id}`, "PUT", {
+        title: link.title,
+        url: link.url,
+        description: link.description,
+        icon_mode: "custom",
+        icon_url: uploadedIcon.url,
+      });
+      input.value = "";
+      if (!result.ok) {
+        message("default-link-message", result.error);
+        return;
+      }
+      message("default-link-message", "Default link icon changed.");
+      await loadDefaultLinks();
+    });
+  });
+
+  list.querySelectorAll("button[data-action='reset-default-icon']").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const link = state.defaultLinks.find((item) => item.id === Number(button.dataset.id));
+      if (!link) {
+        return;
+      }
+      const result = await api(`/api/site-admin/default-links/${button.dataset.id}`, "PUT", {
+        title: link.title,
+        url: link.url,
+        description: link.description,
+        icon_mode: "favicon",
+        icon_url: "",
+      });
+      if (!result.ok) {
+        message("default-link-message", result.error);
+        return;
+      }
+      message("default-link-message", "Default link icon reset.");
+      await loadDefaultLinks();
+    });
+  });
 
   list.querySelectorAll("button[data-action='delete-default-link']").forEach((button) => {
     button.addEventListener("click", async () => {
@@ -317,12 +407,94 @@ function renderDefaultLinks() {
   });
 }
 
-async function api(url, method, body) {
+function startDefaultLinkEdit(id) {
+  const link = state.defaultLinks.find((item) => item.id === id);
+  if (!link) {
+    return;
+  }
+  document.getElementById("default-link-id").value = link.id;
+  document.getElementById("default-link-title").value = link.title;
+  document.getElementById("default-link-url").value = link.url;
+  document.getElementById("default-link-description").value = link.description || "";
+  document.getElementById("default-link-icon-url").value = link.icon_url || "";
+  document.getElementById("default-link-icon-mode").value = link.icon_mode || "favicon";
+  document.getElementById("default-link-icon-file").value = "";
+  document.getElementById("default-link-submit").textContent = "Save default link";
+  defaultLinkCancel.classList.remove("hidden");
+  message("default-link-icon-message", link.icon_mode === "custom" ? "This default link is using a custom icon." : "This default link is using the site favicon.");
+  message("default-link-message", "Editing default link.");
+  defaultLinkForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function resetDefaultLinkForm() {
+  defaultLinkForm.reset();
+  document.getElementById("default-link-id").value = "";
+  document.getElementById("default-link-icon-url").value = "";
+  document.getElementById("default-link-icon-mode").value = "favicon";
+  document.getElementById("default-link-submit").textContent = "Add default link";
+  defaultLinkCancel.classList.add("hidden");
+  message("default-link-icon-message", "If you do not upload an image, the site favicon will be used automatically.");
+}
+
+async function uploadOptionalFile(kind, inputOrId, messageId) {
+  const input = typeof inputOrId === "string" ? document.getElementById(inputOrId) : inputOrId;
+  const file = input.files[0];
+  if (!file) {
+    return null;
+  }
+  if (!state.uploadEnabled) {
+    message(messageId, "S3 uploads are not configured yet.");
+    return { ok: false };
+  }
+  const form = new FormData();
+  form.append("kind", kind);
+  form.append("file", file);
+  const result = await api("/api/uploads", "POST", form, true);
+  if (!result.ok) {
+    message(messageId, result.error);
+    return { ok: false };
+  }
+  message(messageId, "Icon uploaded.");
+  return { ok: true, url: result.upload.url };
+}
+
+function bindIconFallbacks(root) {
+  root.querySelectorAll(".tile-icon-image").forEach((img) => {
+    const fallback = img.nextElementSibling;
+    const showFallback = () => {
+      img.classList.add("hidden");
+      fallback.classList.add("visible");
+    };
+    img.addEventListener("error", showFallback, { once: true });
+    img.addEventListener("load", () => {
+      img.classList.remove("hidden");
+      fallback.classList.remove("visible");
+    }, { once: true });
+    if (!img.getAttribute("src")) {
+      showFallback();
+    }
+  });
+}
+
+function initials(value) {
+  return String(value || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "?";
+}
+
+function s3UploadEnabled(settings) {
+  return Boolean(settings?.endpoint_url && settings?.bucket && settings?.access_key_id && settings?.secret_access_key);
+}
+
+async function api(url, method, body, isForm = false) {
   try {
     const response = await fetch(url, {
       method,
-      headers: body ? { "Content-Type": "application/json" } : {},
-      body: body ? JSON.stringify(body) : undefined,
+      headers: body && !isForm ? { "Content-Type": "application/json" } : {},
+      body: body ? (isForm ? body : JSON.stringify(body)) : undefined,
       credentials: "same-origin",
     });
     const contentType = response.headers.get("content-type") || "";

@@ -303,6 +303,24 @@ button {
   line-height: 1;
 }
 
+.file-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  border: 0;
+  padding: 0;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .tab {
   background: rgba(255, 255, 255, 0.55);
   color: var(--muted);
@@ -353,6 +371,7 @@ button {
 .field-row,
 .toolbar,
 .nav-toolbar,
+.form-actions,
 .stack-actions {
   display: flex;
   gap: 12px;
@@ -470,7 +489,7 @@ textarea {
 }
 
 .link-list {
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
   margin-top: 16px;
 }
 
@@ -488,6 +507,10 @@ textarea {
 .link-card {
   display: grid;
   gap: 12px;
+}
+
+.link-card-url {
+  display: block;
 }
 
 .link-card-head,
@@ -559,9 +582,7 @@ textarea {
 }
 
 .link-card-actions {
-  flex-direction: column;
-  align-items: stretch;
-  flex: 0 0 116px;
+  align-items: center;
 }
 
 .link-card-actions .secondary-button,
@@ -570,6 +591,10 @@ textarea {
   min-height: 48px;
   padding: 8px 12px;
   font-size: 0.95rem;
+}
+
+.default-link-head .card-actions {
+  justify-content: flex-end;
 }
 
 .meta,
@@ -713,5 +738,9 @@ body[data-theme="night"] .nav-tile {
 
   .stack-actions {
     justify-content: stretch;
+  }
+
+  .link-list {
+    grid-template-columns: 1fr;
   }
 }

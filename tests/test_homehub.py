@@ -205,6 +205,36 @@ class HomeHubAppTests(unittest.TestCase):
         )
         self.assertEqual(created_default_link["status"], "201 Created")
 
+        custom_icon = self.request(
+            "PUT",
+            f"/api/site-admin/default-links/{created_default_link['json']['link']['id']}",
+            {
+                "title": "News",
+                "url": "https://news.ycombinator.com",
+                "description": "Daily reading",
+                "icon_mode": "custom",
+                "icon_url": "https://cdn.example.com/news.png",
+            },
+        )
+        self.assertEqual(custom_icon["status"], "200 OK")
+        self.assertEqual(custom_icon["json"]["link"]["icon_mode"], "custom")
+        self.assertEqual(custom_icon["json"]["link"]["icon_url"], "https://cdn.example.com/news.png")
+
+        reset_icon = self.request(
+            "PUT",
+            f"/api/site-admin/default-links/{created_default_link['json']['link']['id']}",
+            {
+                "title": "News",
+                "url": "https://news.ycombinator.com",
+                "description": "Daily reading",
+                "icon_mode": "favicon",
+                "icon_url": "",
+            },
+        )
+        self.assertEqual(reset_icon["status"], "200 OK")
+        self.assertEqual(reset_icon["json"]["link"]["icon_mode"], "favicon")
+        self.assertIn("/api/favicon", reset_icon["json"]["link"]["icon_url"])
+
         links_after = self.request("GET", "/api/site-admin/default-links")
         self.assertEqual(len(links_after["json"]["links"]), len(links_before["json"]["links"]) + 1)
 

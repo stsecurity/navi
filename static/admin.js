@@ -276,24 +276,22 @@ function renderLinks() {
     .map(
       (link) => `
         <article class="link-card">
-          <div class="link-card-head">
-            <div class="card-title-row">
-              <div class="tile-icon-wrap small">
-                <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" data-fallback="${escapeAttribute(initials(link.title))}" />
-                <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
-              </div>
-              <div>
+          <div class="card-title-row">
+            <div class="tile-icon-wrap small">
+              <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" data-fallback="${escapeAttribute(initials(link.title))}" />
+              <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
+            </div>
+            <div>
               <h3>${escapeHtml(link.title)}</h3>
               <p>${escapeHtml(link.description || "No description yet.")}</p>
-              </div>
-            </div>
-            <div class="card-actions link-card-actions">
-              <button class="secondary-button" type="button" data-action="edit" data-id="${link.id}">Edit</button>
-              <button class="secondary-button" type="button" data-action="reset-icon" data-id="${link.id}">Reset icon</button>
-              <button class="ghost-button" type="button" data-action="delete" data-id="${link.id}">Delete</button>
             </div>
           </div>
-          <a href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.url)}</a>
+          <a class="link-card-url" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">${escapeHtml(link.url)}</a>
+          <div class="card-actions link-card-actions">
+            <button class="secondary-button" type="button" data-action="edit" data-id="${link.id}">Edit</button>
+            <button class="secondary-button" type="button" data-action="reset-icon" data-id="${link.id}">Reset icon</button>
+            <button class="ghost-button" type="button" data-action="delete" data-id="${link.id}">Delete</button>
+          </div>
         </article>
       `
     )

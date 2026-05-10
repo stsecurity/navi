@@ -230,6 +230,9 @@
           </div>
 
           <form id="default-link-form" class="link-form">
+            <input id="default-link-id" type="hidden" />
+            <input id="default-link-icon-url" type="hidden" />
+            <input id="default-link-icon-mode" type="hidden" value="favicon" />
             <label>
               <span>Title</span>
               <input id="default-link-title" type="text" placeholder="GitHub" required />
@@ -242,7 +245,15 @@
               <span>Description</span>
               <input id="default-link-description" type="text" placeholder="Code hosting" />
             </label>
-            <button class="primary-button" type="submit">Add default link</button>
+            <label class="wide">
+              <span>Custom icon image (optional)</span>
+              <input id="default-link-icon-file" type="file" accept="image/*" />
+            </label>
+            <p class="message wide" id="default-link-icon-message">If you do not upload an image, the site favicon will be used automatically.</p>
+            <div class="form-actions wide">
+              <button class="primary-button" id="default-link-submit" type="submit">Add default link</button>
+              <button class="ghost-button hidden" id="default-link-cancel" type="button">Cancel edit</button>
+            </div>
           </form>
           <p id="default-link-message" class="message" aria-live="polite"></p>
           <div id="default-link-list" class="default-link-list"></div>

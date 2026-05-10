@@ -634,6 +634,8 @@ class HomeHubApp:
                 result = self.list_default_links(environ)
             elif path == "/api/site-admin/default-links" and method == "POST":
                 result = self.create_default_link(environ)
+            elif path.startswith("/api/site-admin/default-links/") and method == "PUT":
+                result = self.update_default_link(environ, path)
             elif path.startswith("/api/site-admin/default-links/") and method == "DELETE":
                 result = self.delete_default_link(environ, path)
             elif path.startswith("/oauth/") and path.endswith("/start") and method == "GET":
@@ -1265,13 +1267,13 @@ class HomeHubApp:
             rows = conn.execute(
                 "SELECT id, title, url, description, icon_url, icon_mode, position FROM default_links ORDER BY position ASC, id ASC"
             ).fetchall()
-        return json_response(HTTPStatus.OK, {"links": [dict(row) for row in rows]})
+        return json_response(HTTPStatus.OK, {"links": [self.serialize_link(dict(row)) for row in rows]})
 
     def create_default_link(self, environ):
         self.require_admin(environ)
         payload = parse_json_body(environ)
         title, url, description = self.validate_link_payload(payload)
-        icon_url = favicon_url(url)
+        icon_url, icon_mode = self.resolve_link_icon(payload, url)
         with self.connect() as conn:
             position = conn.execute("SELECT COALESCE(MAX(position), 0) + 1 FROM default_links").fetchone()[0]
             cursor = conn.execute(
@@ -1279,13 +1281,58 @@ class HomeHubApp:
                 INSERT INTO default_links (title, url, description, icon_url, icon_mode, position)
                 VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (title, url, description, icon_url, "favicon", position),
+                (title, url, description, icon_url, icon_mode, position),
             )
+            link = {
+                "id": cursor.lastrowid,
+                "title": title,
+                "url": url,
+                "description": description,
+                "icon_url": icon_url,
+                "icon_mode": icon_mode,
+                "position": position,
+            }
         response = json_response(
             HTTPStatus.CREATED,
-            {"link": {"id": cursor.lastrowid, "title": title, "url": url, "description": description, "icon_url": icon_url, "icon_mode": "favicon", "position": position}},
+            {"link": self.serialize_link(link)},
         )
-        self.warm_favicon_async(icon_url)
+        if icon_mode == "favicon":
+            self.warm_favicon_async(icon_url)
+        return response
+
+    def update_default_link(self, environ, path):
+        self.require_admin(environ)
+        link_id = self.parse_resource_id(path)
+        payload = parse_json_body(environ)
+        title, url, description = self.validate_link_payload(payload)
+        with self.connect() as conn:
+            current = conn.execute(
+                "SELECT icon_url, icon_mode, position FROM default_links WHERE id = ?",
+                (link_id,),
+            ).fetchone()
+            if not current:
+                return json_response(HTTPStatus.NOT_FOUND, {"error": "Default link not found"})
+            icon_url, icon_mode = self.resolve_link_icon(payload, url, current)
+            conn.execute(
+                """
+                UPDATE default_links
+                SET title = ?, url = ?, description = ?, icon_url = ?, icon_mode = ?
+                WHERE id = ?
+                """,
+                (title, url, description, icon_url, icon_mode, link_id),
+            )
+            link = {
+                "id": link_id,
+                "title": title,
+                "url": url,
+                "description": description,
+                "icon_url": icon_url,
+                "icon_mode": icon_mode,
+                "position": current["position"],
+            }
+        response = json_response(HTTPStatus.OK, {"link": self.serialize_link(link)})
+        if icon_mode == "favicon":
+            self.warm_favicon_async(icon_url)
         return response
 
     def upload_asset(self, environ):
