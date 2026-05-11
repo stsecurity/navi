@@ -76,55 +76,64 @@
                 <input id="search" type="search" placeholder="Search your links" />
               </div>
 
-              <form id="link-form" class="link-form link-editor">
-                <input id="link-id" type="hidden" />
-                <input id="link-icon-url" type="hidden" />
-                <input id="link-icon-mode" type="hidden" value="favicon" />
-                <label>
-                  <span>Title</span>
-                  <input id="link-title" type="text" placeholder="GitHub" required />
-                </label>
-                <label>
-                  <span>URL</span>
-                  <input id="link-url" type="url" placeholder="https://github.com" required />
-                </label>
-                <label class="wide">
-                  <span>Description</span>
-                  <input id="link-description" type="text" placeholder="Code, issues, pull requests" />
-                </label>
-                <label class="wide">
-                  <span>Custom icon image (optional)</span>
-                  <input id="link-icon-file" type="file" accept="image/*" />
-                </label>
-                <p class="message wide" id="link-icon-message">If you do not upload an image, the site favicon will be used automatically.</p>
-                <div class="form-actions wide">
-                  <button class="primary-button" id="link-submit" type="submit">Add link</button>
-                  <button class="ghost-button hidden" id="link-cancel" type="button">Cancel edit</button>
-                </div>
-              </form>
+              <div class="tabs link-tabs" role="tablist" aria-label="Link tools">
+                <button class="tab active" type="button" data-link-tab="add">Add link</button>
+                <button class="tab" type="button" data-link-tab="import">Import links</button>
+              </div>
 
-              <section class="bookmark-import">
-                <div class="section-head">
-                  <div>
-                    <p class="eyebrow">Import</p>
-                    <h3>Browser bookmarks</h3>
-                    <p>Upload a Chrome, Edge, or Firefox bookmark export, then choose which links to add.</p>
-                  </div>
-                </div>
-                <div class="import-controls">
-                  <label class="wide">
-                    <span>Bookmark export file</span>
-                    <input id="bookmark-file" type="file" accept=".html,.htm,.json,text/html,application/json" />
+              <div class="link-tab-panel active" data-link-panel="add">
+                <form id="link-form" class="link-form link-editor">
+                  <input id="link-id" type="hidden" />
+                  <input id="link-icon-url" type="hidden" />
+                  <input id="link-icon-mode" type="hidden" value="favicon" />
+                  <label>
+                    <span>Title</span>
+                    <input id="link-title" type="text" placeholder="GitHub" required />
                   </label>
-                  <div class="form-actions">
+                  <label>
+                    <span>URL</span>
+                    <input id="link-url" type="url" placeholder="https://github.com" required />
+                  </label>
+                  <label class="wide">
+                    <span>Description</span>
+                    <input id="link-description" type="text" placeholder="Code, issues, pull requests" />
+                  </label>
+                  <label class="wide">
+                    <span>Custom icon image (optional)</span>
+                    <input id="link-icon-file" type="file" accept="image/*" />
+                  </label>
+                  <p class="message wide" id="link-icon-message">If you do not upload an image, the site favicon will be used automatically.</p>
+                  <div class="form-actions wide">
+                    <button class="primary-button" id="link-submit" type="submit">Add link</button>
+                    <button class="ghost-button hidden" id="link-cancel" type="button">Cancel edit</button>
+                  </div>
+                </form>
+              </div>
+
+              <div class="link-tab-panel" data-link-panel="import">
+                <section class="bookmark-import">
+                  <div class="section-head">
+                    <div>
+                      <p class="eyebrow">Import</p>
+                      <h3>Browser bookmarks</h3>
+                      <p>Upload a Chrome, Edge, or Firefox bookmark export, then choose which links to add.</p>
+                    </div>
+                  </div>
+                  <div class="import-controls">
+                    <label class="wide">
+                      <span>Bookmark export file</span>
+                      <input id="bookmark-file" type="file" accept=".html,.htm,.json,text/html,application/json" />
+                    </label>
+                  </div>
+                  <p id="bookmark-import-message" class="message" aria-live="polite"></p>
+                  <div id="bookmark-preview" class="bookmark-preview"></div>
+                  <div class="form-actions bookmark-actions hidden" id="bookmark-actions">
                     <button class="secondary-button" id="bookmark-select-all" type="button">Select all</button>
                     <button class="ghost-button" id="bookmark-clear-all" type="button">Clear all</button>
                     <button class="primary-button" id="bookmark-import-selected" type="button">Import selected</button>
                   </div>
-                </div>
-                <p id="bookmark-import-message" class="message" aria-live="polite"></p>
-                <div id="bookmark-preview" class="bookmark-preview"></div>
-              </section>
+                </section>
+              </div>
 
               <p id="dashboard-message" class="message" aria-live="polite"></p>
               <div id="link-list" class="link-list"></div>

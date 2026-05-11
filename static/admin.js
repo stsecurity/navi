@@ -10,6 +10,7 @@ const state = {
   uploadEnabled: false,
   previewCustomBackgroundUrl: "",
   importedBookmarks: [],
+  bookmarkTree: [],
 };
 
 const authPanel = document.getElementById("auth-panel");
@@ -37,6 +38,7 @@ const bookmarkImportMessage = document.getElementById("bookmark-import-message")
 const bookmarkSelectAll = document.getElementById("bookmark-select-all");
 const bookmarkClearAll = document.getElementById("bookmark-clear-all");
 const bookmarkImportSelected = document.getElementById("bookmark-import-selected");
+const bookmarkActions = document.getElementById("bookmark-actions");
 const previewFields = ["theme", "accent", "layout", "background"];
 const backgroundChoices = {
   day: [
@@ -53,6 +55,10 @@ const backgroundChoices = {
 
 document.querySelectorAll(".tab").forEach((button) => {
   button.addEventListener("click", () => setMode(button.dataset.mode));
+});
+
+document.querySelectorAll("[data-link-tab]").forEach((button) => {
+  button.addEventListener("click", () => setLinkTab(button.dataset.linkTab));
 });
 
 authForm.addEventListener("submit", async (event) => {
@@ -121,21 +127,23 @@ bookmarkFile.addEventListener("change", async () => {
   const file = bookmarkFile.files[0];
   if (!file) {
     state.importedBookmarks = [];
+    state.bookmarkTree = [];
     renderBookmarkPreview();
     bookmarkImportMessage.textContent = "";
     return;
   }
   try {
     const text = await file.text();
-    const bookmarks = file.name.toLowerCase().endsWith(".json")
+    const parsed = file.name.toLowerCase().endsWith(".json")
       ? parseFirefoxJsonBookmarks(text)
       : parseBookmarkHtml(text);
-    state.importedBookmarks = markBookmarkDuplicates(bookmarks).slice(0, 1000);
+    state.importedBookmarks = markBookmarkDuplicates(parsed.bookmarks);
+    state.bookmarkTree = parsed.tree;
     renderBookmarkPreview();
-    const duplicateCount = state.importedBookmarks.filter((bookmark) => bookmark.duplicate).length;
-    bookmarkImportMessage.textContent = `${state.importedBookmarks.length} bookmark${state.importedBookmarks.length === 1 ? "" : "s"} ready.${duplicateCount ? ` ${duplicateCount} already exist and will be skipped.` : ""}`;
+    updateBookmarkImportMessage();
   } catch (error) {
     state.importedBookmarks = [];
+    state.bookmarkTree = [];
     renderBookmarkPreview();
     bookmarkImportMessage.textContent = "Could not read that bookmark file.";
   }
@@ -144,24 +152,31 @@ bookmarkFile.addEventListener("change", async () => {
 bookmarkSelectAll.addEventListener("click", () => {
   state.importedBookmarks = state.importedBookmarks.map((bookmark) => ({
     ...bookmark,
-    selected: !bookmark.duplicate,
+    selected: true,
   }));
   renderBookmarkPreview();
+  updateBookmarkImportMessage();
 });
 
 bookmarkClearAll.addEventListener("click", () => {
   state.importedBookmarks = state.importedBookmarks.map((bookmark) => ({ ...bookmark, selected: false }));
   renderBookmarkPreview();
+  updateBookmarkImportMessage();
 });
 
 bookmarkImportSelected.addEventListener("click", async () => {
-  const selected = state.importedBookmarks.filter((bookmark) => bookmark.selected && !bookmark.duplicate);
-  if (!selected.length) {
+  const selectedBookmarks = state.importedBookmarks.filter((bookmark) => bookmark.selected);
+  const importable = selectedBookmarks.filter((bookmark) => !bookmark.duplicate);
+  if (!importable.length) {
     bookmarkImportMessage.textContent = "Choose at least one bookmark to import.";
     return;
   }
+  if (importable.length > 1000) {
+    bookmarkImportMessage.textContent = `${importable.length} bookmarks selected. Select 1000 or fewer to import at once.`;
+    return;
+  }
   const result = await api("/api/links/import", "POST", {
-    links: selected.map((bookmark) => ({ title: bookmark.title, url: bookmark.url })),
+    links: importable.map((bookmark) => ({ title: bookmark.title, url: bookmark.url })),
   });
   if (!result.ok) {
     bookmarkImportMessage.textContent = result.error;
@@ -169,6 +184,7 @@ bookmarkImportSelected.addEventListener("click", async () => {
   }
   bookmarkImportMessage.textContent = `${result.imported_count} imported. ${result.skipped_duplicate_count} duplicate${result.skipped_duplicate_count === 1 ? "" : "s"} skipped. ${result.skipped_invalid_count} invalid skipped.`;
   state.importedBookmarks = [];
+  state.bookmarkTree = [];
   bookmarkFile.value = "";
   renderBookmarkPreview();
   await loadLinks();
@@ -271,6 +287,15 @@ function setMode(mode) {
   });
   authSubmit.textContent = mode === "login" ? "Login" : "Create account";
   authMessage.textContent = "";
+}
+
+function setLinkTab(tabName) {
+  document.querySelectorAll("[data-link-tab]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.linkTab === tabName);
+  });
+  document.querySelectorAll("[data-link-panel]").forEach((panel) => {
+    panel.classList.toggle("active", panel.dataset.linkPanel === tabName);
+  });
 }
 
 function updateRegistrationState() {
@@ -419,6 +444,7 @@ function startEdit(id) {
   if (!link) {
     return;
   }
+  setLinkTab("add");
   document.getElementById("link-id").value = link.id;
   document.getElementById("link-title").value = link.title;
   document.getElementById("link-url").value = link.url;
@@ -453,18 +479,23 @@ function parseBookmarkHtml(text) {
   const document = new DOMParser().parseFromString(text, "text/html");
   const root = document.querySelector("dl");
   if (!root) {
-    return [];
+    return { bookmarks: [], tree: [] };
   }
   const bookmarks = [];
+  const tree = [];
+  let nextFolderId = 0;
 
-  function parseFolder(dl, path) {
+  function parseFolder(dl, path, target) {
     Array.from(dl.children).forEach((item) => {
       const tag = item.tagName?.toLowerCase();
       if (tag === "dt") {
         const children = Array.from(item.children);
         const link = children.find((child) => child.tagName?.toLowerCase() === "a");
         if (link) {
-          addParsedBookmark(bookmarks, link.textContent, link.getAttribute("href"), path);
+          const bookmark = addParsedBookmark(bookmarks, link.textContent, link.getAttribute("href"), path);
+          if (bookmark) {
+            target.push({ type: "bookmark", bookmarkId: bookmark.id });
+          }
           return;
         }
 
@@ -472,39 +503,55 @@ function parseBookmarkHtml(text) {
         const nested = children.find((child) => child.tagName?.toLowerCase() === "dl")
           || (item.nextElementSibling?.tagName?.toLowerCase() === "dl" ? item.nextElementSibling : null);
         if (folder && nested) {
-          parseFolder(nested, [...path, cleanText(folder.textContent)]);
+          const node = { type: "folder", id: nextFolderId, title: cleanText(folder.textContent) || "Untitled folder", children: [] };
+          nextFolderId += 1;
+          target.push(node);
+          parseFolder(nested, [...path, node.title], node.children);
         }
         return;
       }
       if (tag === "dl" || item.children.length) {
-        parseFolder(item, path);
+        parseFolder(item, path, target);
       }
     });
   }
 
-  parseFolder(root, []);
-  return bookmarks;
+  parseFolder(root, [], tree);
+  return { bookmarks, tree };
 }
 
 function parseFirefoxJsonBookmarks(text) {
   const data = JSON.parse(text);
   const bookmarks = [];
+  const tree = [];
+  let nextFolderId = 0;
 
-  function walk(node, path) {
+  function walk(node, path, target) {
     if (!node || typeof node !== "object") {
       return;
     }
     const url = node.uri || node.url;
     if (url) {
-      addParsedBookmark(bookmarks, node.title, url, path);
+      const bookmark = addParsedBookmark(bookmarks, node.title, url, path);
+      if (bookmark) {
+        target.push({ type: "bookmark", bookmarkId: bookmark.id });
+      }
       return;
     }
-    const nextPath = node.title ? [...path, cleanText(node.title)] : path;
-    (node.children || []).forEach((child) => walk(child, nextPath));
+    const title = cleanText(node.title);
+    const children = node.children || [];
+    if (title) {
+      const folder = { type: "folder", id: nextFolderId, title, children: [] };
+      nextFolderId += 1;
+      target.push(folder);
+      children.forEach((child) => walk(child, [...path, title], folder.children));
+      return;
+    }
+    children.forEach((child) => walk(child, path, target));
   }
 
-  walk(data, []);
-  return bookmarks;
+  walk(data, [], tree);
+  return { bookmarks, tree };
 }
 
 function addParsedBookmark(bookmarks, rawTitle, rawUrl, path) {
@@ -513,13 +560,16 @@ function addParsedBookmark(bookmarks, rawTitle, rawUrl, path) {
   if (!parsed) {
     return;
   }
-  bookmarks.push({
+  const bookmark = {
+    id: bookmarks.length,
     title: cleanText(rawTitle) || parsed.hostname || url,
     url,
     folder: path.filter(Boolean).join(" / "),
     selected: true,
     duplicate: false,
-  });
+  };
+  bookmarks.push(bookmark);
+  return bookmark;
 }
 
 function markBookmarkDuplicates(bookmarks) {
@@ -528,37 +578,164 @@ function markBookmarkDuplicates(bookmarks) {
   return bookmarks.map((bookmark) => {
     const duplicate = existing.has(bookmark.url) || seen.has(bookmark.url);
     seen.add(bookmark.url);
-    return { ...bookmark, duplicate, selected: !duplicate };
+    return { ...bookmark, duplicate, selected: false };
   });
 }
 
 function renderBookmarkPreview() {
   if (!state.importedBookmarks.length) {
-    bookmarkPreview.innerHTML = `<div class="empty-state">Choose a bookmark export file to preview links before importing.</div>`;
+    bookmarkPreview.innerHTML = bookmarkFile.files[0]
+      ? `<div class="empty-state">No importable bookmarks were found in this file.</div>`
+      : "";
+    bookmarkActions.classList.add("hidden");
     return;
   }
 
-  bookmarkPreview.innerHTML = state.importedBookmarks
-    .map(
-      (bookmark, index) => `
-        <label class="bookmark-row ${bookmark.duplicate ? "duplicate" : ""}">
-          <input type="checkbox" data-bookmark-index="${index}" ${bookmark.selected ? "checked" : ""} ${bookmark.duplicate ? "disabled" : ""} />
-          <span>
-            <strong>${escapeHtml(bookmark.title)}</strong>
-            <small>${escapeHtml(bookmark.folder || "No folder")}</small>
-            <a href="${escapeAttribute(bookmark.url)}" target="_blank" rel="noreferrer">${escapeHtml(bookmark.url)}</a>
-          </span>
-          ${bookmark.duplicate ? `<em>Already saved</em>` : ""}
-        </label>
-      `
-    )
-    .join("");
+  bookmarkActions.classList.remove("hidden");
+  bookmarkPreview.innerHTML = renderBookmarkTree(state.bookmarkTree, 1);
 
   bookmarkPreview.querySelectorAll("input[data-bookmark-index]").forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const index = Number(checkbox.dataset.bookmarkIndex);
       state.importedBookmarks[index].selected = checkbox.checked;
+      updateFolderCheckboxes();
+      updateBookmarkImportMessage();
     });
+  });
+  bookmarkPreview.querySelectorAll("input[data-bookmark-folder]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const folder = findBookmarkFolder(Number(checkbox.dataset.bookmarkFolder), state.bookmarkTree);
+      if (!folder) {
+        return;
+      }
+      const ids = collectFolderBookmarkIds(folder);
+      ids.forEach((id) => {
+        const bookmark = state.importedBookmarks[id];
+        if (!bookmark) {
+          return;
+        }
+        bookmark.selected = checkbox.checked;
+        const bookmarkCheckbox = bookmarkPreview.querySelector(`input[data-bookmark-index="${id}"]`);
+        if (bookmarkCheckbox) {
+          bookmarkCheckbox.checked = checkbox.checked;
+        }
+      });
+      updateFolderCheckboxes();
+      updateBookmarkImportMessage();
+    });
+  });
+  bookmarkPreview.querySelectorAll("button[data-action='toggle-bookmark-folder']").forEach((button) => {
+      button.addEventListener("click", () => {
+        const folder = button.closest(".bookmark-folder");
+        const collapsed = folder.classList.toggle("collapsed");
+        button.setAttribute("aria-expanded", String(!collapsed));
+      });
+  });
+  updateFolderCheckboxes();
+}
+
+function updateBookmarkImportMessage() {
+  if (!state.importedBookmarks.length) {
+    bookmarkImportMessage.textContent = "";
+    return;
+  }
+  const selected = state.importedBookmarks.filter((bookmark) => bookmark.selected);
+  const selectedDuplicates = selected.filter((bookmark) => bookmark.duplicate).length;
+  bookmarkImportMessage.textContent =
+    `${state.importedBookmarks.length} bookmark${state.importedBookmarks.length === 1 ? "" : "s"} total. ` +
+    `${selected.length} selected.` +
+    (selectedDuplicates ? ` ${selectedDuplicates} already exist and will be skipped.` : "");
+}
+
+function renderBookmarkTree(nodes, level) {
+  return nodes
+    .map((node) => {
+      if (node.type === "folder") {
+        const selection = folderSelectionState(node);
+        return `
+          <section class="bookmark-folder collapsed" data-folder-id="${node.id}" style="--bookmark-level: ${level}">
+            <div class="bookmark-folder-heading">
+              <input type="checkbox" data-bookmark-folder="${node.id}" ${selection.checked ? "checked" : ""} ${selection.disabled ? "disabled" : ""} />
+              <button class="bookmark-folder-title" type="button" data-action="toggle-bookmark-folder" aria-expanded="false">
+              <span class="folder-caret" aria-hidden="true"></span>
+              ${escapeHtml(node.title)}
+              </button>
+            </div>
+            <div class="bookmark-folder-children">${renderBookmarkTree(node.children, level + 1)}</div>
+          </section>
+        `;
+      }
+      const bookmark = state.importedBookmarks[node.bookmarkId];
+      if (!bookmark) {
+        return "";
+      }
+      return `
+        <label class="bookmark-row ${bookmark.duplicate ? "duplicate" : ""}" style="--bookmark-level: ${level}">
+          <input type="checkbox" data-bookmark-index="${bookmark.id}" ${bookmark.selected ? "checked" : ""} ${bookmark.duplicate ? "disabled" : ""} />
+          <span>
+            <strong>${escapeHtml(bookmark.title)}</strong>
+            <a href="${escapeAttribute(bookmark.url)}" target="_blank" rel="noreferrer">${escapeHtml(bookmark.url)}</a>
+          </span>
+          ${bookmark.duplicate ? `<em>Already saved</em>` : ""}
+        </label>
+      `;
+    })
+    .join("");
+}
+
+function findBookmarkFolder(id, nodes) {
+  for (const node of nodes) {
+    if (node.type !== "folder") {
+      continue;
+    }
+    if (node.id === id) {
+      return node;
+    }
+    const found = findBookmarkFolder(id, node.children);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
+}
+
+function collectFolderBookmarkIds(folder) {
+  const ids = [];
+  folder.children.forEach((node) => {
+    if (node.type === "bookmark") {
+      ids.push(node.bookmarkId);
+      return;
+    }
+    ids.push(...collectFolderBookmarkIds(node));
+  });
+  return ids;
+}
+
+function folderSelectionState(folder) {
+  const selectable = collectFolderBookmarkIds(folder)
+    .map((id) => state.importedBookmarks[id])
+    .filter(Boolean);
+  if (!selectable.length) {
+    return { checked: false, indeterminate: false, disabled: true };
+  }
+  const selectedCount = selectable.filter((bookmark) => bookmark.selected).length;
+  return {
+    checked: selectedCount === selectable.length,
+    indeterminate: selectedCount > 0 && selectedCount < selectable.length,
+    disabled: false,
+  };
+}
+
+function updateFolderCheckboxes() {
+  bookmarkPreview.querySelectorAll("input[data-bookmark-folder]").forEach((checkbox) => {
+    const folder = findBookmarkFolder(Number(checkbox.dataset.bookmarkFolder), state.bookmarkTree);
+    if (!folder) {
+      return;
+    }
+    const selection = folderSelectionState(folder);
+    checkbox.checked = selection.checked;
+    checkbox.indeterminate = selection.indeterminate;
+    checkbox.disabled = selection.disabled;
   });
 }
 
@@ -792,6 +969,7 @@ function escapeAttribute(value) {
 
 async function init() {
   setMode("login");
+  setLinkTab("add");
   renderBookmarkPreview();
   await loadSiteConfig();
   await refreshSession();
