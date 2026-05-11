@@ -103,6 +103,29 @@
                 </div>
               </form>
 
+              <section class="bookmark-import">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Import</p>
+                    <h3>Browser bookmarks</h3>
+                    <p>Upload a Chrome, Edge, or Firefox bookmark export, then choose which links to add.</p>
+                  </div>
+                </div>
+                <div class="import-controls">
+                  <label class="wide">
+                    <span>Bookmark export file</span>
+                    <input id="bookmark-file" type="file" accept=".html,.htm,.json,text/html,application/json" />
+                  </label>
+                  <div class="form-actions">
+                    <button class="secondary-button" id="bookmark-select-all" type="button">Select all</button>
+                    <button class="ghost-button" id="bookmark-clear-all" type="button">Clear all</button>
+                    <button class="primary-button" id="bookmark-import-selected" type="button">Import selected</button>
+                  </div>
+                </div>
+                <p id="bookmark-import-message" class="message" aria-live="polite"></p>
+                <div id="bookmark-preview" class="bookmark-preview"></div>
+              </section>
+
               <p id="dashboard-message" class="message" aria-live="polite"></p>
               <div id="link-list" class="link-list"></div>
             </section>

@@ -606,6 +606,8 @@ class HomeHubApp:
                 result = self.proxy_favicon(environ)
             elif path == "/api/oauth/providers" and method == "GET":
                 result = self.list_oauth_providers(environ)
+            elif path == "/api/links/import" and method == "POST":
+                result = self.import_links(environ)
             elif path == "/api/links" and method == "POST":
                 result = self.create_link(environ)
             elif path.startswith("/api/links/") and method == "PUT":
@@ -1098,6 +1100,84 @@ class HomeHubApp:
         if icon_mode == "favicon":
             self.warm_favicon_async(icon_url)
         return response
+
+    def import_links(self, environ):
+        user = self.require_user(environ)
+        payload = parse_json_body(environ)
+        raw_links = payload.get("links")
+        if not isinstance(raw_links, list):
+            raise ValueError("Links must be a list.")
+        if len(raw_links) > 1000:
+            raise ValueError("Import up to 1000 bookmarks at a time.")
+
+        candidates = []
+        skipped_invalid = 0
+        skipped_request_duplicates = 0
+        seen_in_request = set()
+        for item in raw_links:
+            if not isinstance(item, dict):
+                skipped_invalid += 1
+                continue
+            url = str(item.get("url") or "").strip()
+            parsed_url = urlparse(url)
+            if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+                skipped_invalid += 1
+                continue
+            if url in seen_in_request:
+                skipped_request_duplicates += 1
+                continue
+            title = str(item.get("title") or "").strip() or parsed_url.netloc or url
+            candidates.append((title[:160], url))
+            seen_in_request.add(url)
+
+        imported = []
+        skipped_duplicates = skipped_request_duplicates
+        with self.connect() as conn:
+            existing_urls = {
+                row["url"]
+                for row in conn.execute("SELECT url FROM links WHERE user_id = ?", (user["id"],)).fetchall()
+            }
+            position = conn.execute(
+                "SELECT COALESCE(MAX(position), 0) FROM links WHERE user_id = ?",
+                (user["id"],),
+            ).fetchone()[0]
+            for title, url in candidates:
+                if url in existing_urls:
+                    skipped_duplicates += 1
+                    continue
+                position += 1
+                icon_url = favicon_url(url)
+                cursor = conn.execute(
+                    """
+                    INSERT INTO links (user_id, title, url, description, icon_url, icon_mode, position)
+                    VALUES (?, ?, ?, '', ?, 'favicon', ?)
+                    """,
+                    (user["id"], title, url, icon_url, position),
+                )
+                imported.append(
+                    {
+                        "id": cursor.lastrowid,
+                        "title": title,
+                        "url": url,
+                        "description": "",
+                        "icon_url": icon_url,
+                        "icon_mode": "favicon",
+                        "position": position,
+                    }
+                )
+                existing_urls.add(url)
+
+        for link in imported:
+            self.warm_favicon_async(link["icon_url"])
+        return json_response(
+            HTTPStatus.CREATED,
+            {
+                "imported_count": len(imported),
+                "skipped_duplicate_count": skipped_duplicates,
+                "skipped_invalid_count": skipped_invalid,
+                "links": [self.serialize_link(link) for link in imported],
+            },
+        )
 
     def update_link(self, environ, path):
         user = self.require_user(environ)

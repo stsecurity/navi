@@ -98,6 +98,37 @@ class HomeHubAppTests(unittest.TestCase):
         self.assertEqual(updated["status"], "200 OK")
         self.assertEqual(updated["json"]["link"]["title"], "Codex App")
 
+    def test_user_can_import_bookmarks_and_duplicates_are_skipped(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "strongpass"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
+
+        imported = self.request(
+            "POST",
+            "/api/links/import",
+            {
+                "links": [
+                    {"title": "Python", "url": "https://www.python.org/"},
+                    {"title": "Inbox Duplicate", "url": "https://mail.google.com"},
+                    {"title": "Bad", "url": "javascript:alert(1)"},
+                    {"title": "", "url": "https://example.com/docs"},
+                    {"title": "Python Again", "url": "https://www.python.org/"},
+                ],
+            },
+        )
+        self.assertEqual(imported["status"], "201 Created")
+        self.assertEqual(imported["json"]["imported_count"], 2)
+        self.assertEqual(imported["json"]["skipped_duplicate_count"], 2)
+        self.assertEqual(imported["json"]["skipped_invalid_count"], 1)
+        self.assertEqual(imported["json"]["links"][0]["position"], 4)
+        self.assertEqual(imported["json"]["links"][1]["title"], "example.com")
+
+        links = self.request("GET", "/api/links")
+        self.assertEqual(len(links["json"]["links"]), 5)
+
     def test_oauth_identity_can_link_and_login(self):
         register = self.request(
             "POST",
@@ -267,6 +298,10 @@ class HomeHubAppTests(unittest.TestCase):
         response = self.request("GET", "/api/links")
         self.assertEqual(response["status"], "400 Bad Request")
         self.assertEqual(response["json"]["error"], "Authentication required.")
+
+        imported = self.request("POST", "/api/links/import", {"links": []})
+        self.assertEqual(imported["status"], "400 Bad Request")
+        self.assertEqual(imported["json"]["error"], "Authentication required.")
 
     def request(self, method, path, payload=None, cookie="USE_STATE"):
         body = b""

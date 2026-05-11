@@ -9,6 +9,7 @@ const state = {
   registrationOpen: true,
   uploadEnabled: false,
   previewCustomBackgroundUrl: "",
+  importedBookmarks: [],
 };
 
 const authPanel = document.getElementById("auth-panel");
@@ -30,6 +31,12 @@ const siteAdminLink = document.getElementById("site-admin-link");
 const oauthLoginList = document.getElementById("oauth-login-list");
 const oauthLinkList = document.getElementById("oauth-link-list");
 const oauthLinkMessage = document.getElementById("oauth-link-message");
+const bookmarkFile = document.getElementById("bookmark-file");
+const bookmarkPreview = document.getElementById("bookmark-preview");
+const bookmarkImportMessage = document.getElementById("bookmark-import-message");
+const bookmarkSelectAll = document.getElementById("bookmark-select-all");
+const bookmarkClearAll = document.getElementById("bookmark-clear-all");
+const bookmarkImportSelected = document.getElementById("bookmark-import-selected");
 const previewFields = ["theme", "accent", "layout", "background"];
 const backgroundChoices = {
   day: [
@@ -108,6 +115,63 @@ linkCancel.addEventListener("click", () => {
   resetLinkForm();
   dashboardMessage.textContent = "";
   renderLinks();
+});
+
+bookmarkFile.addEventListener("change", async () => {
+  const file = bookmarkFile.files[0];
+  if (!file) {
+    state.importedBookmarks = [];
+    renderBookmarkPreview();
+    bookmarkImportMessage.textContent = "";
+    return;
+  }
+  try {
+    const text = await file.text();
+    const bookmarks = file.name.toLowerCase().endsWith(".json")
+      ? parseFirefoxJsonBookmarks(text)
+      : parseBookmarkHtml(text);
+    state.importedBookmarks = markBookmarkDuplicates(bookmarks).slice(0, 1000);
+    renderBookmarkPreview();
+    const duplicateCount = state.importedBookmarks.filter((bookmark) => bookmark.duplicate).length;
+    bookmarkImportMessage.textContent = `${state.importedBookmarks.length} bookmark${state.importedBookmarks.length === 1 ? "" : "s"} ready.${duplicateCount ? ` ${duplicateCount} already exist and will be skipped.` : ""}`;
+  } catch (error) {
+    state.importedBookmarks = [];
+    renderBookmarkPreview();
+    bookmarkImportMessage.textContent = "Could not read that bookmark file.";
+  }
+});
+
+bookmarkSelectAll.addEventListener("click", () => {
+  state.importedBookmarks = state.importedBookmarks.map((bookmark) => ({
+    ...bookmark,
+    selected: !bookmark.duplicate,
+  }));
+  renderBookmarkPreview();
+});
+
+bookmarkClearAll.addEventListener("click", () => {
+  state.importedBookmarks = state.importedBookmarks.map((bookmark) => ({ ...bookmark, selected: false }));
+  renderBookmarkPreview();
+});
+
+bookmarkImportSelected.addEventListener("click", async () => {
+  const selected = state.importedBookmarks.filter((bookmark) => bookmark.selected && !bookmark.duplicate);
+  if (!selected.length) {
+    bookmarkImportMessage.textContent = "Choose at least one bookmark to import.";
+    return;
+  }
+  const result = await api("/api/links/import", "POST", {
+    links: selected.map((bookmark) => ({ title: bookmark.title, url: bookmark.url })),
+  });
+  if (!result.ok) {
+    bookmarkImportMessage.textContent = result.error;
+    return;
+  }
+  bookmarkImportMessage.textContent = `${result.imported_count} imported. ${result.skipped_duplicate_count} duplicate${result.skipped_duplicate_count === 1 ? "" : "s"} skipped. ${result.skipped_invalid_count} invalid skipped.`;
+  state.importedBookmarks = [];
+  bookmarkFile.value = "";
+  renderBookmarkPreview();
+  await loadLinks();
 });
 
 settingsForm.addEventListener("submit", async (event) => {
@@ -385,6 +449,135 @@ function resetLinkForm() {
   document.getElementById("link-icon-message").textContent = "If you do not upload an image, the site favicon will be used automatically.";
 }
 
+function parseBookmarkHtml(text) {
+  const document = new DOMParser().parseFromString(text, "text/html");
+  const root = document.querySelector("dl");
+  if (!root) {
+    return [];
+  }
+  const bookmarks = [];
+
+  function parseFolder(dl, path) {
+    Array.from(dl.children).forEach((item) => {
+      const tag = item.tagName?.toLowerCase();
+      if (tag === "dt") {
+        const children = Array.from(item.children);
+        const link = children.find((child) => child.tagName?.toLowerCase() === "a");
+        if (link) {
+          addParsedBookmark(bookmarks, link.textContent, link.getAttribute("href"), path);
+          return;
+        }
+
+        const folder = children.find((child) => child.tagName?.toLowerCase() === "h3");
+        const nested = children.find((child) => child.tagName?.toLowerCase() === "dl")
+          || (item.nextElementSibling?.tagName?.toLowerCase() === "dl" ? item.nextElementSibling : null);
+        if (folder && nested) {
+          parseFolder(nested, [...path, cleanText(folder.textContent)]);
+        }
+        return;
+      }
+      if (tag === "dl" || item.children.length) {
+        parseFolder(item, path);
+      }
+    });
+  }
+
+  parseFolder(root, []);
+  return bookmarks;
+}
+
+function parseFirefoxJsonBookmarks(text) {
+  const data = JSON.parse(text);
+  const bookmarks = [];
+
+  function walk(node, path) {
+    if (!node || typeof node !== "object") {
+      return;
+    }
+    const url = node.uri || node.url;
+    if (url) {
+      addParsedBookmark(bookmarks, node.title, url, path);
+      return;
+    }
+    const nextPath = node.title ? [...path, cleanText(node.title)] : path;
+    (node.children || []).forEach((child) => walk(child, nextPath));
+  }
+
+  walk(data, []);
+  return bookmarks;
+}
+
+function addParsedBookmark(bookmarks, rawTitle, rawUrl, path) {
+  const url = String(rawUrl || "").trim();
+  const parsed = parseHttpUrl(url);
+  if (!parsed) {
+    return;
+  }
+  bookmarks.push({
+    title: cleanText(rawTitle) || parsed.hostname || url,
+    url,
+    folder: path.filter(Boolean).join(" / "),
+    selected: true,
+    duplicate: false,
+  });
+}
+
+function markBookmarkDuplicates(bookmarks) {
+  const existing = new Set(state.links.map((link) => link.url));
+  const seen = new Set();
+  return bookmarks.map((bookmark) => {
+    const duplicate = existing.has(bookmark.url) || seen.has(bookmark.url);
+    seen.add(bookmark.url);
+    return { ...bookmark, duplicate, selected: !duplicate };
+  });
+}
+
+function renderBookmarkPreview() {
+  if (!state.importedBookmarks.length) {
+    bookmarkPreview.innerHTML = `<div class="empty-state">Choose a bookmark export file to preview links before importing.</div>`;
+    return;
+  }
+
+  bookmarkPreview.innerHTML = state.importedBookmarks
+    .map(
+      (bookmark, index) => `
+        <label class="bookmark-row ${bookmark.duplicate ? "duplicate" : ""}">
+          <input type="checkbox" data-bookmark-index="${index}" ${bookmark.selected ? "checked" : ""} ${bookmark.duplicate ? "disabled" : ""} />
+          <span>
+            <strong>${escapeHtml(bookmark.title)}</strong>
+            <small>${escapeHtml(bookmark.folder || "No folder")}</small>
+            <a href="${escapeAttribute(bookmark.url)}" target="_blank" rel="noreferrer">${escapeHtml(bookmark.url)}</a>
+          </span>
+          ${bookmark.duplicate ? `<em>Already saved</em>` : ""}
+        </label>
+      `
+    )
+    .join("");
+
+  bookmarkPreview.querySelectorAll("input[data-bookmark-index]").forEach((checkbox) => {
+    checkbox.addEventListener("change", () => {
+      const index = Number(checkbox.dataset.bookmarkIndex);
+      state.importedBookmarks[index].selected = checkbox.checked;
+    });
+  });
+}
+
+function cleanText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function parseHttpUrl(url) {
+  try {
+    const parsed = new URL(url);
+    if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) {
+      return null;
+    }
+    return parsed;
+  } catch (error) {
+    return null;
+  }
+}
+
 function fillSettingsForm(settings) {
   document.getElementById("theme").value = settings.theme;
   document.getElementById("accent").value = settings.accent;
@@ -599,6 +792,7 @@ function escapeAttribute(value) {
 
 async function init() {
   setMode("login");
+  renderBookmarkPreview();
   await loadSiteConfig();
   await refreshSession();
   if (!state.user) {
