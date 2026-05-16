@@ -49,6 +49,7 @@ This project is meant to be a clean base for a custom homepage:
 - persistent SQLite-backed users and sessions
 - private per-user link storage
 - add, edit, delete, and search links
+- import selected bookmarks from Chrome, Edge, and Firefox exports
 - automatic favicon icons for links, with optional custom icon uploads
 - third-party sign-in and account linking for Google, GitHub, and self-hosted Nextcloud
 - user settings for themes, colors, layout density, backgrounds, page text, and browser tab title
@@ -61,7 +62,7 @@ This project is meant to be a clean base for a custom homepage:
 ## Next ideas
 
 - categories and drag-to-reorder
-- import/export bookmarks
+- export bookmarks
 - background images or themes
 - search shortcuts
 - browser extension sync

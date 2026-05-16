@@ -171,8 +171,8 @@ bookmarkImportSelected.addEventListener("click", async () => {
     bookmarkImportMessage.textContent = "Choose at least one bookmark to import.";
     return;
   }
-  if (importable.length > 1000) {
-    bookmarkImportMessage.textContent = `${importable.length} bookmarks selected. Select 1000 or fewer to import at once.`;
+  if (selectedBookmarks.length > 1000) {
+    bookmarkImportMessage.textContent = `${selectedBookmarks.length} bookmarks selected. Select 1000 or fewer to import at once.`;
     return;
   }
   const result = await api("/api/links/import", "POST", {
@@ -486,34 +486,39 @@ function parseBookmarkHtml(text) {
   let nextFolderId = 0;
 
   function parseFolder(dl, path, target) {
-    Array.from(dl.children).forEach((item) => {
+    const children = Array.from(dl.children);
+    for (let index = 0; index < children.length; index += 1) {
+      const item = children[index];
       const tag = item.tagName?.toLowerCase();
       if (tag === "dt") {
-        const children = Array.from(item.children);
-        const link = children.find((child) => child.tagName?.toLowerCase() === "a");
+        const itemChildren = Array.from(item.children);
+        const link = itemChildren.find((child) => child.tagName?.toLowerCase() === "a");
         if (link) {
           const bookmark = addParsedBookmark(bookmarks, link.textContent, link.getAttribute("href"), path);
           if (bookmark) {
             target.push({ type: "bookmark", bookmarkId: bookmark.id });
           }
-          return;
+          continue;
         }
 
-        const folder = children.find((child) => child.tagName?.toLowerCase() === "h3");
-        const nested = children.find((child) => child.tagName?.toLowerCase() === "dl")
+        const folder = itemChildren.find((child) => child.tagName?.toLowerCase() === "h3");
+        const nested = itemChildren.find((child) => child.tagName?.toLowerCase() === "dl")
           || (item.nextElementSibling?.tagName?.toLowerCase() === "dl" ? item.nextElementSibling : null);
         if (folder && nested) {
           const node = { type: "folder", id: nextFolderId, title: cleanText(folder.textContent) || "Untitled folder", children: [] };
           nextFolderId += 1;
           target.push(node);
           parseFolder(nested, [...path, node.title], node.children);
+          if (nested === children[index + 1]) {
+            index += 1;
+          }
         }
-        return;
+        continue;
       }
       if (tag === "dl" || item.children.length) {
         parseFolder(item, path, target);
       }
-    });
+    }
   }
 
   parseFolder(root, [], tree);
