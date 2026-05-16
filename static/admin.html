@@ -40,6 +40,7 @@
               <span>Password</span>
               <input id="password" type="password" placeholder="At least 8 characters" required />
             </label>
+            <p id="auth-password-rule" class="password-rule hidden" aria-live="polite"></p>
             <button class="primary-button" id="auth-submit" type="submit">Login</button>
           </form>
           <div class="oauth-panel">
@@ -215,6 +216,33 @@
                 <button class="primary-button" type="submit">Save settings</button>
               </form>
               <p id="settings-message" class="message" aria-live="polite"></p>
+
+              <section class="account-security">
+                <div class="section-head">
+                  <div>
+                    <p class="eyebrow">Security</p>
+                    <h3>Change password</h3>
+                    <p>Enter your current password, then choose a new password.</p>
+                  </div>
+                </div>
+                <form id="password-form" class="account-form">
+                  <label>
+                    <span>Current password</span>
+                    <input id="current-password" type="password" autocomplete="current-password" required />
+                  </label>
+                  <label>
+                    <span>New password</span>
+                    <input id="new-password" type="password" autocomplete="new-password" minlength="8" required />
+                  </label>
+                  <p id="new-password-rule" class="password-rule full-span" aria-live="polite"></p>
+                  <label>
+                    <span>Confirm new password</span>
+                    <input id="confirm-password" type="password" autocomplete="new-password" minlength="8" required />
+                  </label>
+                  <button class="primary-button" type="submit">Change password</button>
+                </form>
+                <p id="password-message" class="message" aria-live="polite"></p>
+              </section>
             </section>
           </div>
         </section>

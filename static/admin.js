@@ -17,6 +17,8 @@ const authPanel = document.getElementById("auth-panel");
 const dashboard = document.getElementById("dashboard");
 const authForm = document.getElementById("auth-form");
 const authMessage = document.getElementById("auth-message");
+const authPasswordInput = document.getElementById("password");
+const authPasswordRule = document.getElementById("auth-password-rule");
 const dashboardMessage = document.getElementById("dashboard-message");
 const settingsMessage = document.getElementById("settings-message");
 const authSubmit = document.getElementById("auth-submit");
@@ -26,6 +28,10 @@ const linkCancel = document.getElementById("link-cancel");
 const linkList = document.getElementById("link-list");
 const searchInput = document.getElementById("search");
 const settingsForm = document.getElementById("settings-form");
+const passwordForm = document.getElementById("password-form");
+const passwordMessage = document.getElementById("password-message");
+const newPasswordInput = document.getElementById("new-password");
+const newPasswordRule = document.getElementById("new-password-rule");
 const registrationPill = document.getElementById("registration-pill");
 const registerTab = document.getElementById("register-tab");
 const siteAdminLink = document.getElementById("site-admin-link");
@@ -53,7 +59,7 @@ const backgroundChoices = {
   ],
 };
 
-document.querySelectorAll(".tab").forEach((button) => {
+document.querySelectorAll("[data-mode]").forEach((button) => {
   button.addEventListener("click", () => setMode(button.dataset.mode));
 });
 
@@ -64,7 +70,11 @@ document.querySelectorAll("[data-link-tab]").forEach((button) => {
 authForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.getElementById("email").value.trim();
-  const password = document.getElementById("password").value;
+  const password = authPasswordInput.value;
+  if (state.mode === "register" && !updatePasswordRule(authPasswordRule, password, { showWhenEmpty: true })) {
+    authMessage.textContent = "Password does not meet the requirements.";
+    return;
+  }
   const endpoint = state.mode === "login" ? "/api/login" : "/api/register";
   const result = await api(endpoint, "POST", { email, password });
 
@@ -80,9 +90,7 @@ authForm.addEventListener("submit", async (event) => {
 
 document.getElementById("logout-button").addEventListener("click", async () => {
   await api("/api/logout", "POST");
-  state.user = null;
-  state.links = [];
-  render();
+  clearSessionState();
 });
 
 linkForm.addEventListener("submit", async (event) => {
@@ -227,9 +235,49 @@ settingsForm.addEventListener("submit", async (event) => {
   document.getElementById("background-file").value = "";
 });
 
+passwordForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  passwordMessage.textContent = "";
+  const currentPassword = document.getElementById("current-password").value;
+  const newPassword = newPasswordInput.value;
+  const confirmPassword = document.getElementById("confirm-password").value;
+
+  if (!updatePasswordRule(newPasswordRule, newPassword, { showWhenEmpty: true })) {
+    passwordMessage.textContent = "New password does not meet the requirements.";
+    return;
+  }
+  if (newPassword !== confirmPassword) {
+    passwordMessage.textContent = "New passwords do not match.";
+    return;
+  }
+
+  const result = await api("/api/account/password", "PUT", {
+    current_password: currentPassword,
+    new_password: newPassword,
+    confirm_password: confirmPassword,
+  });
+  if (!result.ok) {
+    passwordMessage.textContent = result.error;
+    return;
+  }
+
+  passwordForm.reset();
+  clearSessionState();
+  setMode("login");
+  authMessage.textContent = "Password changed. Please log in with your new password.";
+});
+
 searchInput.addEventListener("input", () => {
   state.search = searchInput.value.trim().toLowerCase();
   renderLinks();
+});
+
+authPasswordInput.addEventListener("input", () => {
+  updateAuthPasswordRule();
+});
+
+newPasswordInput.addEventListener("input", () => {
+  updatePasswordRule(newPasswordRule, newPasswordInput.value);
 });
 
 async function refreshSession() {
@@ -282,11 +330,12 @@ function setMode(mode) {
     return;
   }
   state.mode = mode;
-  document.querySelectorAll(".tab").forEach((button) => {
+  document.querySelectorAll("[data-mode]").forEach((button) => {
     button.classList.toggle("active", button.dataset.mode === mode);
   });
   authSubmit.textContent = mode === "login" ? "Login" : "Create account";
   authMessage.textContent = "";
+  updateAuthPasswordRule();
 }
 
 function setLinkTab(tabName) {
@@ -323,10 +372,69 @@ function render() {
     siteAdminLink.classList.add("hidden");
     dashboardMessage.textContent = "";
     settingsMessage.textContent = "";
+    passwordMessage.textContent = "";
     oauthLinkMessage.textContent = "Link a provider so you can sign in without a password next time.";
     linkList.innerHTML = "";
     renderOAuthProviders();
   }
+}
+
+function clearSessionState() {
+  state.user = null;
+  state.links = [];
+  state.importedBookmarks = [];
+  state.bookmarkTree = [];
+  state.search = "";
+  searchInput.value = "";
+  renderBookmarkPreview();
+  render();
+}
+
+function updateAuthPasswordRule() {
+  if (state.mode !== "register") {
+    authPasswordRule.classList.add("hidden");
+    authPasswordRule.textContent = "";
+    return true;
+  }
+  authPasswordRule.classList.remove("hidden");
+  return updatePasswordRule(authPasswordRule, authPasswordInput.value);
+}
+
+function updatePasswordRule(element, password, options = {}) {
+  const showWhenEmpty = options.showWhenEmpty === true;
+  if (!password && !showWhenEmpty) {
+    element.textContent = "";
+    element.classList.remove("valid", "invalid");
+    return false;
+  }
+  const result = passwordStrength(password);
+  element.textContent = `${result.valid ? "✓" : "X"} ${result.message}`;
+  element.classList.toggle("valid", result.valid);
+  element.classList.toggle("invalid", !result.valid);
+  return result.valid;
+}
+
+function passwordStrength(password) {
+  const ruleText = "Use at least 8 English letters, numbers, or special characters, with at least 3 types.";
+  if (password.length < 8) {
+    return { valid: false, message: ruleText };
+  }
+  if (!/^[!-~]+$/.test(password)) {
+    return { valid: false, message: "Only English letters, numbers, and special characters are allowed." };
+  }
+  const categories = [
+    /[0-9]/.test(password),
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length;
+  if (categories < 3) {
+    return {
+      valid: false,
+      message: "Include at least 3 of these: numbers, lowercase letters, uppercase letters, special characters.",
+    };
+  }
+  return { valid: true, message: "Password meets the requirements." };
 }
 
 function renderOAuthProviders() {

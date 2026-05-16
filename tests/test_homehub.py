@@ -33,7 +33,7 @@ class HomeHubAppTests(unittest.TestCase):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.assertEqual(register["status"], "201 Created")
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
@@ -43,11 +43,102 @@ class HomeHubAppTests(unittest.TestCase):
         self.assertEqual(site_admin["status"], "200 OK")
         self.assertIn("site controls", site_admin["text"])
 
+    def test_registration_enforces_password_rules(self):
+        too_simple = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "lowercaseonly"},
+        )
+        self.assertEqual(too_simple["status"], "400 Bad Request")
+        self.assertIn("at least 3", too_simple["json"]["error"])
+
+        other_language = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongパス1!"},
+        )
+        self.assertEqual(other_language["status"], "400 Bad Request")
+        self.assertIn("English letters", other_language["json"]["error"])
+
+    def test_user_can_change_password_and_is_logged_out(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
+
+        wrong_current = self.request(
+            "PUT",
+            "/api/account/password",
+            {
+                "current_password": "Wrongpass1",
+                "new_password": "Newstrongpass1",
+                "confirm_password": "Newstrongpass1",
+            },
+        )
+        self.assertEqual(wrong_current["status"], "400 Bad Request")
+        self.assertEqual(wrong_current["json"]["error"], "Current password is incorrect.")
+
+        mismatch = self.request(
+            "PUT",
+            "/api/account/password",
+            {
+                "current_password": "Strongpass1",
+                "new_password": "Newstrongpass1",
+                "confirm_password": "Differentpass1",
+            },
+        )
+        self.assertEqual(mismatch["status"], "400 Bad Request")
+        self.assertEqual(mismatch["json"]["error"], "New passwords do not match.")
+
+        weak = self.request(
+            "PUT",
+            "/api/account/password",
+            {
+                "current_password": "Strongpass1",
+                "new_password": "short",
+                "confirm_password": "short",
+            },
+        )
+        self.assertEqual(weak["status"], "400 Bad Request")
+        self.assertEqual(weak["json"]["error"], "New password must be at least 8 characters long.")
+
+        changed = self.request(
+            "PUT",
+            "/api/account/password",
+            {
+                "current_password": "Strongpass1",
+                "new_password": "Newstrongpass1",
+                "confirm_password": "Newstrongpass1",
+            },
+        )
+        self.assertEqual(changed["status"], "200 OK")
+
+        me = self.request("GET", "/api/me")
+        self.assertFalse(me["json"]["authenticated"])
+
+        old_login = self.request(
+            "POST",
+            "/api/login",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+            cookie=None,
+        )
+        self.assertEqual(old_login["status"], "401 Unauthorized")
+
+        new_login = self.request(
+            "POST",
+            "/api/login",
+            {"email": "owner@example.com", "password": "Newstrongpass1"},
+            cookie=None,
+        )
+        self.assertEqual(new_login["status"], "200 OK")
+
     def test_user_can_update_personal_settings_and_links(self):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
@@ -102,7 +193,7 @@ class HomeHubAppTests(unittest.TestCase):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
@@ -133,7 +224,7 @@ class HomeHubAppTests(unittest.TestCase):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
@@ -155,7 +246,7 @@ class HomeHubAppTests(unittest.TestCase):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
@@ -181,7 +272,7 @@ class HomeHubAppTests(unittest.TestCase):
         register = self.request(
             "POST",
             "/api/register",
-            {"email": "owner@example.com", "password": "strongpass"},
+            {"email": "owner@example.com", "password": "Strongpass1"},
         )
         self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
@@ -211,7 +302,7 @@ class HomeHubAppTests(unittest.TestCase):
         blocked = self.request(
             "POST",
             "/api/register",
-            {"email": "new@example.com", "password": "strongpass"},
+            {"email": "new@example.com", "password": "Strongpass1"},
             cookie=None,
         )
         self.assertEqual(blocked["status"], "403 Forbidden")
@@ -219,7 +310,7 @@ class HomeHubAppTests(unittest.TestCase):
         created_account = self.request(
             "POST",
             "/api/site-admin/accounts",
-            {"email": "member@example.com", "password": "strongpass"},
+            {"email": "member@example.com", "password": "Strongpass1"},
         )
         self.assertEqual(created_account["status"], "201 Created")
         self.assertFalse(created_account["json"]["account"]["is_admin"])
@@ -280,7 +371,7 @@ class HomeHubAppTests(unittest.TestCase):
         member_login = self.request(
             "POST",
             "/api/login",
-            {"email": "member@example.com", "password": "strongpass"},
+            {"email": "member@example.com", "password": "Strongpass1"},
             cookie=None,
         )
         member_cookie = member_login["headers"]["Set-Cookie"].split(";", 1)[0]
@@ -302,6 +393,10 @@ class HomeHubAppTests(unittest.TestCase):
         imported = self.request("POST", "/api/links/import", {"links": []})
         self.assertEqual(imported["status"], "400 Bad Request")
         self.assertEqual(imported["json"]["error"], "Authentication required.")
+
+        password = self.request("PUT", "/api/account/password", {})
+        self.assertEqual(password["status"], "400 Bad Request")
+        self.assertEqual(password["json"]["error"], "Authentication required.")
 
     def request(self, method, path, payload=None, cookie="USE_STATE"):
         body = b""

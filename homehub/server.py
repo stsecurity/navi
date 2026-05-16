@@ -123,6 +123,24 @@ def verify_password(password, stored_hash):
     return hmac.compare_digest(candidate, digest)
 
 
+def validate_password_strength(password, label="Password"):
+    if len(password) < 8:
+        raise ValueError(f"{label} must be at least 8 characters long.")
+    if not all(33 <= ord(char) <= 126 for char in password):
+        raise ValueError(f"{label} can only use English letters, numbers, and special characters.")
+
+    categories = [
+        any(char.isdigit() for char in password),
+        any("a" <= char <= "z" for char in password),
+        any("A" <= char <= "Z" for char in password),
+        any(not char.isalnum() for char in password),
+    ]
+    if sum(categories) < 3:
+        raise ValueError(
+            f"{label} must include at least 3 of these: numbers, lowercase letters, uppercase letters, special characters."
+        )
+
+
 def parse_cookies(environ):
     cookies = {}
     raw = environ.get("HTTP_COOKIE", "") or ""
@@ -596,6 +614,8 @@ class HomeHubApp:
                 result = self.login(environ)
             elif path == "/api/logout" and method == "POST":
                 result = self.logout(environ)
+            elif path == "/api/account/password" and method == "PUT":
+                result = self.change_password(environ)
             elif path == "/api/me" and method == "GET":
                 result = self.me(environ)
             elif path == "/api/public-config" and method == "GET":
@@ -895,8 +915,7 @@ class HomeHubApp:
 
         if "@" not in email:
             raise ValueError("Enter a valid email address.")
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long.")
+        validate_password_strength(password)
 
         with self.connect() as conn:
             config = self.load_site_config(conn)
@@ -945,6 +964,33 @@ class HomeHubApp:
             {"user": {"email": user["email"], "is_admin": bool(user["is_admin"])}},
             headers,
         )
+
+    def change_password(self, environ):
+        user = self.require_user(environ)
+        payload = parse_json_body(environ)
+        current_password = payload.get("current_password") or ""
+        new_password = payload.get("new_password") or ""
+        confirm_password = payload.get("confirm_password") or ""
+
+        validate_password_strength(new_password, "New password")
+        if new_password != confirm_password:
+            raise ValueError("New passwords do not match.")
+
+        with self.connect() as conn:
+            stored_user = conn.execute(
+                "SELECT password_hash FROM users WHERE id = ?",
+                (user["id"],),
+            ).fetchone()
+            if not stored_user or not verify_password(current_password, stored_user["password_hash"]):
+                raise ValueError("Current password is incorrect.")
+            conn.execute(
+                "UPDATE users SET password_hash = ? WHERE id = ?",
+                (hash_password(new_password), user["id"]),
+            )
+            conn.execute("DELETE FROM sessions WHERE user_id = ?", (user["id"],))
+
+        headers = [("Set-Cookie", "session_id=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax")]
+        return json_response(HTTPStatus.OK, {"ok": True}, headers)
 
     def logout(self, environ):
         cookies = parse_cookies(environ)
@@ -1284,8 +1330,7 @@ class HomeHubApp:
 
         if "@" not in email:
             raise ValueError("Enter a valid email address.")
-        if len(password) < 8:
-            raise ValueError("Password must be at least 8 characters long.")
+        validate_password_strength(password)
 
         with self.connect() as conn:
             existing = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()

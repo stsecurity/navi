@@ -12,6 +12,7 @@
   --accent-strong: #8d4619;
   --accent-soft: rgba(196, 106, 47, 0.18);
   --danger: #a4382b;
+  --success: #197a4a;
   --surface-dark: #1f2933;
   --shadow: 0 24px 80px rgba(73, 54, 33, 0.13);
   --tile-shadow: 0 18px 50px rgba(73, 54, 33, 0.09);
@@ -367,6 +368,14 @@ button {
   margin-top: 22px;
 }
 
+.account-security {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 24px;
+}
+
 .row,
 .field-row,
 .toolbar,
@@ -432,6 +441,22 @@ textarea {
   min-height: 24px;
   color: var(--muted);
   margin: 0;
+}
+
+.password-rule {
+  color: var(--danger);
+  font-family: var(--font-body);
+  font-size: 0.94rem;
+  margin: -4px 0 0;
+  min-height: 22px;
+}
+
+.password-rule.valid {
+  color: var(--success);
+}
+
+.password-rule.invalid {
+  color: var(--danger);
 }
 
 .hidden {
