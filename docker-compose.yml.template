@@ -6,6 +6,7 @@ services:
     container_name: homehub
     restart: unless-stopped
     environment:
+      HOST: 0.0.0.0
       PORT: ${PORT:-8000}
     ports:
       - "${PORT:-8000}:8000"

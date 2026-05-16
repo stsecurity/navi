@@ -41,7 +41,7 @@ This project is meant to be a clean base for a custom homepage:
 - Build: no build step required
 - Test: `python -m unittest discover -s tests`
 - Lint: not configured yet
-- Docker: `docker compose up --build`
+- Docker: copy `docker-compose.yml.template` to `docker-compose.yml`, then run `docker compose up --build`
 
 ## Features in this version
 
@@ -70,6 +70,7 @@ This project is meant to be a clean base for a custom homepage:
 ## Deployment notes
 
 - Docker runs the app on port `8000` by default
+- copy `docker-compose.yml.template` to `docker-compose.yml`; the local compose file is git-ignored for deployment-specific changes
 - `docker-compose.yml` mounts `./data` so the SQLite database survives restarts
 - set your public URL and OAuth credentials from `/site-admin`
 - use `deploy/nginx/homehub.conf.template` as the reverse-proxy starting point on Debian

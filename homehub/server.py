@@ -1639,8 +1639,9 @@ def create_app(config=None):
 
 
 def run():
+    host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8000"))
     app = create_app()
-    with make_server("127.0.0.1", port, app, server_class=ThreadingWSGIServer) as server:
-        print(f"HomeHub running on http://127.0.0.1:{port}")
+    with make_server(host, port, app, server_class=ThreadingWSGIServer) as server:
+        print(f"HomeHub running on http://{host}:{port}")
         server.serve_forever()
