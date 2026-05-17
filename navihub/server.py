@@ -693,10 +693,7 @@ class NaviHubApp:
         return self.serve_themed_page("index.html", user)
 
     def serve_login(self, environ):
-        user = self.current_user(environ)
-        if user:
-            return self.serve_themed_page("login.html", user)
-        return file_response(self.static_dir / "login.html")
+        return self.serve_default_themed_page("login.html")
 
     def serve_admin(self, environ):
         user = self.current_user(environ)
@@ -716,6 +713,12 @@ class NaviHubApp:
         path = self.static_dir / filename
         with self.connect() as conn:
             settings = self.get_user_settings_record(conn, user["id"])
+        return html_response(self.apply_initial_theme(path, settings))
+
+    def serve_default_themed_page(self, filename):
+        path = self.static_dir / filename
+        with self.connect() as conn:
+            settings = self.load_site_config(conn)["default_user_settings"]
         return html_response(self.apply_initial_theme(path, settings))
 
     def apply_initial_theme(self, path, settings):

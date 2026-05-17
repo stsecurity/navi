@@ -46,6 +46,43 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertEqual(admin["status"], "200 OK")
         self.assertIn("Personal Settings", admin["text"])
 
+    def test_login_page_uses_site_default_theme_before_javascript_loads(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
+
+        config = self.request(
+            "PUT",
+            "/api/site-admin/config",
+            {
+                "site_title": "NaviHub",
+                "registration_open": True,
+                "default_user_settings": {
+                    "theme": "night",
+                    "accent": "pink",
+                    "layout": "compact",
+                    "background": "midnight",
+                    "tab_title": "NaviHub",
+                    "admin_heading": "NaviHub",
+                    "admin_copy": "Personal navigation page",
+                    "nav_heading": "NaviHub Home",
+                    "nav_copy": "Personal navigation page",
+                },
+            },
+        )
+        self.assertEqual(config["status"], "200 OK")
+
+        self.request("POST", "/api/logout")
+        login = self.request("GET", "/login", cookie=None)
+        self.assertEqual(login["status"], "200 OK")
+        self.assertIn('data-theme="night"', login["text"])
+        self.assertIn('data-accent="pink"', login["text"])
+        self.assertIn('data-layout="compact"', login["text"])
+        self.assertIn('data-background="midnight"', login["text"])
+
     def test_first_registered_user_becomes_global_admin(self):
         register = self.request(
             "POST",
