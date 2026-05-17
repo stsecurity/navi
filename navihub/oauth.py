@@ -157,7 +157,7 @@ def exchange_code_for_identity(provider, settings, base_url, code):
             headers={
                 "Authorization": f"Bearer {access_token}",
                 "Accept": "application/vnd.github+json",
-                "User-Agent": "HomeHub/1.0",
+                "User-Agent": "NaviHub/1.0",
             },
         )
         email = (user.get("email") or "").strip().lower()
@@ -167,7 +167,7 @@ def exchange_code_for_identity(provider, settings, base_url, code):
                 headers={
                     "Authorization": f"Bearer {access_token}",
                     "Accept": "application/vnd.github+json",
-                    "User-Agent": "HomeHub/1.0",
+                    "User-Agent": "NaviHub/1.0",
                 },
             )
             primary = next((item for item in emails if item.get("primary") and item.get("verified")), None)
@@ -198,7 +198,7 @@ def exchange_code_for_identity(provider, settings, base_url, code):
                 "Authorization": f"Bearer {access_token}",
                 "OCS-APIRequest": "true",
                 "Accept": "application/json",
-                "User-Agent": "HomeHub/1.0",
+                "User-Agent": "NaviHub/1.0",
             },
         )
         user = profile.get("ocs", {}).get("data", {})
@@ -216,7 +216,7 @@ def post_form_json(url, data, extra_headers=None):
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept": "application/json",
-        "User-Agent": "HomeHub/1.0",
+        "User-Agent": "NaviHub/1.0",
     }
     if extra_headers:
         headers.update(extra_headers)
@@ -230,7 +230,7 @@ def get_json(url, headers=None):
         url,
         headers=headers or {
             "Accept": "application/json",
-            "User-Agent": "HomeHub/1.0",
+            "User-Agent": "NaviHub/1.0",
         },
     )
     with urlopen(request, timeout=20) as response:

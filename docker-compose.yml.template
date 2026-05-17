@@ -1,9 +1,9 @@
 services:
-  homehub:
+  navihub:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: homehub
+    container_name: navihub
     restart: unless-stopped
     environment:
       HOST: 0.0.0.0

@@ -1,0 +1,1 @@
+"""NaviHub package."""

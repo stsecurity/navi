@@ -7,7 +7,7 @@ ENV PORT=8000
 WORKDIR /app
 
 COPY app.py /app/app.py
-COPY homehub /app/homehub
+COPY navihub /app/navihub
 COPY static /app/static
 COPY AGENTS.md /app/AGENTS.md
 COPY README.md /app/README.md

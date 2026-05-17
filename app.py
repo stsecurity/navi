@@ -1,4 +1,4 @@
-from homehub.server import run
+from navihub.server import run
 
 
 if __name__ == "__main__":

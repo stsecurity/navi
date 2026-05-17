@@ -1,6 +1,6 @@
-# HomeHub
+# NaviHub
 
-HomeHub is a personal browser start page with a small backend, user authentication, per-user visual settings, and a private collection of links you can manage after signing in.
+NaviHub is a personal browser start page with a small backend, user authentication, per-user visual settings, and a private collection of links you can manage after signing in.
 
 ## Why this project exists
 
@@ -22,11 +22,11 @@ This project is meant to be a clean base for a custom homepage:
 ## Project structure
 
 - `app.py` starts the local server
-- `homehub/server.py` contains routing, auth, and link APIs
-- `homehub/oauth.py` contains third-party login helpers
+- `navihub/server.py` contains routing, auth, and link APIs
+- `navihub/oauth.py` contains third-party login helpers
 - `static/` contains the homepage UI
-- `tests/test_homehub.py` covers auth and protected link flows
-- `deploy/nginx/homehub.conf.template` is the reverse-proxy template
+- `tests/test_navihub.py` covers auth and protected link flows
+- `deploy/nginx/navihub.conf.template` is the reverse-proxy template
 
 ## Pages
 
@@ -73,4 +73,4 @@ This project is meant to be a clean base for a custom homepage:
 - copy `docker-compose.yml.template` to `docker-compose.yml`; the local compose file is git-ignored for deployment-specific changes
 - `docker-compose.yml` mounts `./data` so the SQLite database survives restarts
 - set your public URL and OAuth credentials from `/site-admin`
-- use `deploy/nginx/homehub.conf.template` as the reverse-proxy starting point on Debian
+- use `deploy/nginx/navihub.conf.template` as the reverse-proxy starting point on Debian

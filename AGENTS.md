@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-- Project: HomeHub - a personal browser homepage with private saved links, user customization, and a small authenticated backend
+- Project: NaviHub - a personal browser homepage with private saved links, user customization, and a small authenticated backend
 - Target user: individual users who want a custom start page for their browser
 - My skill level: beginner
 - Stack: Python standard library backend, SQLite, vanilla HTML, CSS, and JavaScript

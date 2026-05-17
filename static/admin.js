@@ -5,7 +5,7 @@ const state = {
   search: "",
   settings: null,
   oauthProviders: [],
-  siteTitle: "HomeHub",
+  siteTitle: "NaviHub",
   registrationOpen: true,
   uploadEnabled: false,
   previewCustomBackgroundUrl: "",
@@ -314,7 +314,7 @@ async function loadUserSettings() {
 async function loadSiteConfig() {
   const result = await api("/api/public-config", "GET");
   state.registrationOpen = result.ok ? result.registration_open : true;
-  state.siteTitle = result.ok ? result.site_title : "HomeHub";
+  state.siteTitle = result.ok ? result.site_title : "NaviHub";
   updateRegistrationState();
 }
 

@@ -4,13 +4,13 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from homehub.server import create_app
+from navihub.server import create_app
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-class HomeHubAppTests(unittest.TestCase):
+class NaviHubAppTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "test.db"

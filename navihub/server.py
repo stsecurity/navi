@@ -18,7 +18,7 @@ from urllib.parse import parse_qs, quote, urljoin, urlparse
 from urllib.request import Request, urlopen
 from wsgiref.simple_server import WSGIServer, make_server
 
-from homehub.oauth import (
+from navihub.oauth import (
     DEFAULT_OAUTH_SETTINGS,
     configured_providers,
     exchange_code_for_identity,
@@ -29,17 +29,17 @@ from homehub.oauth import (
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DEFAULT_DB_PATH = BASE_DIR / "data" / "homehub.db"
+DEFAULT_DB_PATH = BASE_DIR / "data" / "navihub.db"
 DEFAULT_STATIC_DIR = BASE_DIR / "static"
 
-DEFAULT_SITE_TITLE = "HomeHub"
+DEFAULT_SITE_TITLE = "NaviHub"
 DEFAULT_USER_SETTINGS = {
     "theme": "day",
     "accent": "amber",
     "layout": "cozy",
     "background": "sunrise",
     "custom_background_url": "",
-    "tab_title": "My HomeHub",
+    "tab_title": "My NaviHub",
     "admin_heading": "Manage your homepage from a separate backend page.",
     "admin_copy": "Sign in here, update your saved links, then use the main page as your browser home.",
     "nav_heading": "Open what matters, right from your start page.",
@@ -70,7 +70,7 @@ EMPTY_S3_SETTINGS = {
     "access_key_id": "",
     "secret_access_key": "",
     "public_base_url": "",
-    "key_prefix": "homehub",
+    "key_prefix": "navihub",
 }
 
 
@@ -204,7 +204,7 @@ def fetch_url_bytes(url, accept="image/*,*/*;q=0.8"):
     request = Request(
         url,
         headers={
-            "User-Agent": "HomeHub/1.0",
+            "User-Agent": "NaviHub/1.0",
             "Accept": accept,
         },
     )
@@ -268,7 +268,7 @@ def s3_enabled(settings):
 def validate_s3_settings(payload):
     settings = {**EMPTY_S3_SETTINGS, **(payload or {})}
     cleaned = {key: str(value or "").strip() for key, value in settings.items()}
-    cleaned["key_prefix"] = cleaned["key_prefix"] or "homehub"
+    cleaned["key_prefix"] = cleaned["key_prefix"] or "navihub"
     required = ("endpoint_url", "bucket", "access_key_id", "secret_access_key")
     filled = [bool(cleaned[field]) for field in required]
     if any(filled) and not all(filled):
@@ -528,7 +528,7 @@ def init_db(db_path):
         )
 
 
-class HomeHubApp:
+class NaviHubApp:
     def __init__(self, db_path=DEFAULT_DB_PATH, static_dir=DEFAULT_STATIC_DIR, enable_favicon_prewarm=True):
         self.db_path = str(db_path)
         self.static_dir = Path(static_dir)
@@ -1676,7 +1676,7 @@ class HomeHubApp:
 
 def create_app(config=None):
     config = config or {}
-    return HomeHubApp(
+    return NaviHubApp(
         db_path=config.get("db_path", DEFAULT_DB_PATH),
         static_dir=config.get("static_dir", DEFAULT_STATIC_DIR),
         enable_favicon_prewarm=config.get("enable_favicon_prewarm", True),
@@ -1688,5 +1688,5 @@ def run():
     port = int(os.environ.get("PORT", "8000"))
     app = create_app()
     with make_server(host, port, app, server_class=ThreadingWSGIServer) as server:
-        print(f"HomeHub running on http://{host}:{port}")
+        print(f"NaviHub running on http://{host}:{port}")
         server.serve_forever()
