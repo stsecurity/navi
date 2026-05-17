@@ -431,6 +431,10 @@ textarea {
   background: rgba(255, 255, 255, 0.42);
 }
 
+.layout-preview[data-layout="compact"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 body[data-theme="night"] .layout-preview {
   background: rgba(15, 23, 36, 0.42);
 }
@@ -452,8 +456,8 @@ body[data-theme="night"] .layout-preview {
 .layout-preview[data-layout="compact"] span {
   min-height: 34px;
   background:
-    radial-gradient(circle at 14px 19px, var(--accent) 0 7px, transparent 8px),
-    linear-gradient(var(--accent-strong), var(--accent-strong)) 30px 16px / calc(100% - 40px) 6px no-repeat,
+    radial-gradient(circle at 12px 17px, var(--accent) 0 6px, transparent 7px),
+    linear-gradient(var(--accent-strong), var(--accent-strong)) 26px 14px / calc(100% - 34px) 6px no-repeat,
     var(--panel-strong);
 }
 

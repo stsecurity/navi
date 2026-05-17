@@ -946,7 +946,10 @@ function updateLayoutPreview(selectId, previewId) {
   if (!preview) {
     return;
   }
-  preview.dataset.layout = document.getElementById(selectId).value;
+  const layout = document.getElementById(selectId).value;
+  const cardCount = layout === "compact" ? 4 : 3;
+  preview.dataset.layout = layout;
+  preview.innerHTML = Array.from({ length: cardCount }, () => "<span></span>").join("");
 }
 
 function previewBackgroundFile() {
