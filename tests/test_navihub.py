@@ -180,6 +180,20 @@ class NaviHubAppTests(unittest.TestCase):
         settings = self.request("GET", "/api/user-settings")
         self.assertEqual(settings["json"]["settings"]["tab_title"], "Night Board")
 
+        admin = self.request("GET", "/admin")
+        self.assertIn('data-theme="night"', admin["text"])
+        self.assertIn('data-accent="cyan"', admin["text"])
+        self.assertIn('data-layout="compact"', admin["text"])
+        self.assertIn('data-background="midnight"', admin["text"])
+
+        navigation = self.request("GET", "/")
+        self.assertIn('data-theme="night"', navigation["text"])
+        self.assertIn('data-accent="cyan"', navigation["text"])
+
+        site_admin = self.request("GET", "/site-admin")
+        self.assertIn('data-theme="night"', site_admin["text"])
+        self.assertIn('data-accent="cyan"', site_admin["text"])
+
         links = self.request("GET", "/api/links")
         self.assertEqual(len(links["json"]["links"]), 3)
 

@@ -106,6 +106,10 @@ def file_response(path):
     return binary_response(HTTPStatus.OK, data, content_type or "application/octet-stream")
 
 
+def html_response(body):
+    return binary_response(HTTPStatus.OK, body.encode("utf-8"), "text/html; charset=utf-8")
+
+
 def hash_password(password, salt=None):
     salt = salt or secrets.token_hex(16)
     digest = hashlib.pbkdf2_hmac(
@@ -603,7 +607,7 @@ class NaviHubApp:
             if path == "/":
                 result = self.serve_navigation(environ)
             elif path == "/login":
-                result = self.serve_login()
+                result = self.serve_login(environ)
             elif path == "/admin":
                 result = self.serve_admin(environ)
             elif path == "/site-admin":
@@ -683,17 +687,22 @@ class NaviHubApp:
         return body
 
     def serve_navigation(self, environ):
-        if not self.current_user(environ):
+        user = self.current_user(environ)
+        if not user:
             return redirect_response("/login")
-        return file_response(self.static_dir / "index.html")
+        return self.serve_themed_page("index.html", user)
 
-    def serve_login(self):
+    def serve_login(self, environ):
+        user = self.current_user(environ)
+        if user:
+            return self.serve_themed_page("login.html", user)
         return file_response(self.static_dir / "login.html")
 
     def serve_admin(self, environ):
-        if not self.current_user(environ):
+        user = self.current_user(environ)
+        if not user:
             return redirect_response("/login")
-        return file_response(self.static_dir / "admin.html")
+        return self.serve_themed_page("admin.html", user)
 
     def serve_site_admin(self, environ):
         user = self.current_user(environ)
@@ -701,7 +710,44 @@ class NaviHubApp:
             return redirect_response("/login")
         if not user["is_admin"]:
             return redirect_response("/admin")
-        return file_response(self.static_dir / "site-admin.html")
+        return self.serve_themed_page("site-admin.html", user)
+
+    def serve_themed_page(self, filename, user):
+        path = self.static_dir / filename
+        with self.connect() as conn:
+            settings = self.get_user_settings_record(conn, user["id"])
+        return html_response(self.apply_initial_theme(path, settings))
+
+    def apply_initial_theme(self, path, settings):
+        body = path.read_text(encoding="utf-8")
+        replacements = {
+            "data-theme": settings["theme"],
+            "data-accent": settings["accent"],
+            "data-layout": settings["layout"],
+            "data-background": settings["background"],
+        }
+        for attr, value in replacements.items():
+            body = re.sub(rf'{attr}="[^"]*"', f'{attr}="{html.escape(value, quote=True)}"', body, count=1)
+
+        if settings["background"] == "custom" and settings.get("custom_background_url"):
+            custom_url = settings["custom_background_url"].replace("\\", "\\\\").replace('"', '\\"')
+            style_value = f'--custom-bg-image: url("{custom_url}")'
+            escaped_style = html.escape(style_value, quote=True)
+            if re.search(r"<body\b[^>]*\bstyle=", body):
+                body = re.sub(
+                    r'(<body\b[^>]*\bstyle=")([^"]*)"',
+                    lambda match: f'{match.group(1)}{match.group(2)}; {escaped_style}"',
+                    body,
+                    count=1,
+                )
+            else:
+                body = re.sub(
+                    r"(<body\b[^>]*)(>)",
+                    lambda match: f'{match.group(1)} style="{escaped_style}"{match.group(2)}',
+                    body,
+                    count=1,
+                )
+        return body
 
     def serve_static(self, relative_path):
         path = (self.static_dir / relative_path).resolve()
