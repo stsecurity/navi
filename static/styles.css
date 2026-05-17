@@ -419,7 +419,8 @@ textarea {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  min-height: 52px;
+  height: 74px;
+  min-height: 74px;
   padding: 10px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -449,7 +450,6 @@ body[data-theme="night"] .layout-preview {
 }
 
 .layout-preview[data-layout="compact"] span {
-  min-height: 34px;
   background:
     radial-gradient(circle at 12px 17px, var(--accent) 0 6px, transparent 7px),
     linear-gradient(var(--accent-strong), var(--accent-strong)) 26px 14px / calc(100% - 34px) 6px no-repeat,
