@@ -419,9 +419,9 @@ textarea {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  height: 74px;
-  min-height: 74px;
-  padding: 10px;
+  height: 50px;
+  min-height: 50px;
+  padding: 7px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.42);
@@ -438,12 +438,12 @@ body[data-theme="night"] .layout-preview {
 .layout-preview span {
   display: grid;
   min-width: 0;
-  border-radius: 10px;
+  border-radius: 9px;
   background:
-    radial-gradient(circle at 14px 14px, var(--accent) 0 7px, transparent 8px),
-    linear-gradient(var(--accent-strong), var(--accent-strong)) 28px 12px / calc(100% - 38px) 6px no-repeat,
-    linear-gradient(var(--muted), var(--muted)) 10px 34px / calc(100% - 20px) 5px no-repeat,
-    linear-gradient(var(--muted), var(--muted)) 10px 46px / 55% 5px no-repeat,
+    radial-gradient(circle at 12px 12px, var(--accent) 0 6px, transparent 7px),
+    linear-gradient(var(--accent-strong), var(--accent-strong)) 25px 10px / calc(100% - 34px) 5px no-repeat,
+    linear-gradient(var(--muted), var(--muted)) 9px 26px / calc(100% - 18px) 4px no-repeat,
+    linear-gradient(var(--muted), var(--muted)) 9px 34px / 55% 4px no-repeat,
     var(--panel-strong);
   border: 1px solid rgba(31, 41, 51, 0.08);
   box-shadow: var(--tile-shadow);
@@ -451,8 +451,8 @@ body[data-theme="night"] .layout-preview {
 
 .layout-preview[data-layout="compact"] span {
   background:
-    radial-gradient(circle at 12px 17px, var(--accent) 0 6px, transparent 7px),
-    linear-gradient(var(--accent-strong), var(--accent-strong)) 26px 14px / calc(100% - 34px) 6px no-repeat,
+    radial-gradient(circle at 12px 18px, var(--accent) 0 6px, transparent 7px),
+    linear-gradient(var(--accent-strong), var(--accent-strong)) 25px 16px / calc(100% - 34px) 5px no-repeat,
     var(--panel-strong);
 }
 
