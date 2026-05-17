@@ -721,7 +721,7 @@ body[data-theme="night"] .bookmark-row {
 .layout-density-field {
   grid-column: 1 / -1;
   grid-template-columns: minmax(220px, 0.9fr) minmax(280px, 1.1fr);
-  align-items: end;
+  align-items: start;
   column-gap: 20px;
 }
 
