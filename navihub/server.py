@@ -40,8 +40,8 @@ DEFAULT_USER_SETTINGS = {
     "background": "sunrise",
     "custom_background_url": "",
     "tab_title": "My NaviHub",
-    "admin_heading": "Manage your homepage from a separate backend page.",
-    "admin_copy": "Sign in here, update your saved links, then use the main page as your browser home.",
+    "admin_heading": "NaviHub",
+    "admin_copy": "Personal navigation page",
     "nav_heading": "Open what matters, right from your start page.",
     "nav_copy": "This is your personal navigation page. Keep it fast, visual, and focused on the sites you use every day.",
 }
@@ -602,8 +602,10 @@ class NaviHubApp:
         try:
             if path == "/":
                 result = self.serve_navigation(environ)
+            elif path == "/login":
+                result = self.serve_login()
             elif path == "/admin":
-                result = self.serve_admin()
+                result = self.serve_admin(environ)
             elif path == "/site-admin":
                 result = self.serve_site_admin(environ)
             elif path.startswith("/static/"):
@@ -682,16 +684,21 @@ class NaviHubApp:
 
     def serve_navigation(self, environ):
         if not self.current_user(environ):
-            return redirect_response("/admin")
+            return redirect_response("/login")
         return file_response(self.static_dir / "index.html")
 
-    def serve_admin(self):
+    def serve_login(self):
+        return file_response(self.static_dir / "login.html")
+
+    def serve_admin(self, environ):
+        if not self.current_user(environ):
+            return redirect_response("/login")
         return file_response(self.static_dir / "admin.html")
 
     def serve_site_admin(self, environ):
         user = self.current_user(environ)
         if not user:
-            return redirect_response("/admin")
+            return redirect_response("/login")
         if not user["is_admin"]:
             return redirect_response("/admin")
         return file_response(self.static_dir / "site-admin.html")
@@ -782,7 +789,7 @@ class NaviHubApp:
 
         user = self.current_user(environ)
         if mode == "link" and not user:
-            return redirect_response("/admin?oauth_error=login_required")
+            return redirect_response("/login?oauth_error=login_required")
 
         with self.connect() as conn:
             config = self.load_site_config(conn)
@@ -790,7 +797,7 @@ class NaviHubApp:
             if provider not in configured_providers(oauth_settings):
                 raise ValueError("That provider is not configured.")
             state_token = secrets.token_urlsafe(24)
-            redirect_path = "/admin"
+            redirect_path = "/admin" if mode == "link" else "/login"
             conn.execute(
                 """
                 INSERT INTO oauth_states (state, provider, mode, user_id, redirect_path)
@@ -808,11 +815,11 @@ class NaviHubApp:
         code = (query.get("code") or [""])[0].strip()
         provider_error = (query.get("error") or [""])[0].strip()
         if not state_token:
-            return redirect_response("/admin?oauth_error=missing_state")
+            return redirect_response("/login?oauth_error=missing_state")
         if provider_error:
-            return redirect_response(f"/admin?oauth_error={quote(provider_error, safe='')}")
+            return redirect_response(f"/login?oauth_error={quote(provider_error, safe='')}")
         if not code:
-            return redirect_response("/admin?oauth_error=missing_code")
+            return redirect_response("/login?oauth_error=missing_code")
 
         with self.connect() as conn:
             state_row = conn.execute(
@@ -820,20 +827,20 @@ class NaviHubApp:
                 (state_token,),
             ).fetchone()
             if not state_row:
-                return redirect_response("/admin?oauth_error=invalid_state")
+                return redirect_response("/login?oauth_error=invalid_state")
             conn.execute("DELETE FROM oauth_states WHERE state = ?", (state_token,))
             config = self.load_site_config(conn)
             oauth_settings = config["oauth_settings"]
         if state_row["provider"] != provider:
-            return redirect_response("/admin?oauth_error=provider_mismatch")
+            return redirect_response(f"{state_row['redirect_path']}?oauth_error=provider_mismatch")
 
         base_url = self.resolve_external_base_url(environ, oauth_settings)
         try:
             identity = exchange_code_for_identity(provider, oauth_settings, base_url, code)
             if not identity.get("provider_user_id"):
-                return redirect_response("/admin?oauth_error=identity_missing")
+                return redirect_response(f"{state_row['redirect_path']}?oauth_error=identity_missing")
         except Exception as exc:
-            return redirect_response(f"/admin?oauth_error={quote(str(exc)[:120], safe='')}")
+            return redirect_response(f"{state_row['redirect_path']}?oauth_error={quote(str(exc)[:120], safe='')}")
 
         with self.connect() as conn:
             result = self.attach_oauth_identity(conn, state_row["mode"], state_row["user_id"], identity)

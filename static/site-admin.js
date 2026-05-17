@@ -152,7 +152,7 @@ async function init() {
     api("/api/user-settings", "GET"),
   ]);
   if (!config.ok || !personal.ok) {
-    window.location.href = "/admin";
+    window.location.href = config.status === 403 ? "/admin" : "/login";
     return;
   }
   state.config = config.config;
@@ -185,7 +185,7 @@ async function loadDefaultLinks() {
 
 function applyConfig(config) {
   document.title = `${config.site_title} Site Admin`;
-  document.getElementById("site-admin-title").textContent = `${config.site_title} site controls`;
+  document.getElementById("site-admin-title").textContent = `${config.site_title} Site Controls`;
   document.getElementById("site-title").value = config.site_title;
   document.getElementById("external-base-url").value = config.oauth_settings.external_base_url || "";
   document.getElementById("registration-open").value = String(config.registration_open);

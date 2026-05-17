@@ -31,7 +31,8 @@ This project is meant to be a clean base for a custom homepage:
 ## Pages
 
 - `/` is the actual navigation homepage you can use as your browser start page
-- `/admin` is the personal backend page for login, registration, link management, and per-user settings
+- `/login` is the login and registration page
+- `/admin` is the personal settings page for link management and per-user settings
 - `/site-admin` is the global admin page for registration control, accounts, site title, default settings, and default starter links
 
 ## Commands

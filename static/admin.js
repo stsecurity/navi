@@ -1,4 +1,5 @@
 const state = {
+  page: document.body.dataset.page || "admin",
   mode: "login",
   user: null,
   links: [],
@@ -86,6 +87,9 @@ authForm.addEventListener("submit", async (event) => {
   authForm.reset();
   authMessage.textContent = state.mode === "login" ? "Logged in." : "Account created.";
   await refreshSession();
+  if (state.user) {
+    window.location.href = "/admin";
+  }
 });
 
 document.getElementById("logout-button").addEventListener("click", async () => {
@@ -360,8 +364,17 @@ function updateRegistrationState() {
 
 function render() {
   const signedIn = Boolean(state.user);
-  authPanel.classList.toggle("hidden", signedIn);
-  dashboard.classList.toggle("hidden", !signedIn);
+  if (state.page === "login" && signedIn) {
+    window.location.href = "/admin";
+    return;
+  }
+  if (state.page === "admin" && !signedIn) {
+    window.location.href = "/login";
+    return;
+  }
+
+  authPanel.classList.toggle("hidden", signedIn || state.page === "admin");
+  dashboard.classList.toggle("hidden", !signedIn || state.page === "login");
 
   if (signedIn) {
     welcomeTitle.textContent = `Welcome, ${state.user.email}`;
@@ -953,8 +966,8 @@ function syncBackgroundOptions(themeSelectId, backgroundSelectId, preferredValue
 }
 
 function applySettings(settings, options = {}) {
-  const preserveText = options.preserveText === true;
-  const preserveTitle = options.preserveTitle === true;
+  const preserveText = options.preserveText === true || state.page === "login";
+  const preserveTitle = options.preserveTitle === true || state.page === "login";
   document.body.dataset.theme = settings.theme;
   document.body.dataset.accent = settings.accent;
   document.body.dataset.layout = settings.layout;

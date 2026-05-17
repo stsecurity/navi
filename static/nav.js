@@ -10,7 +10,7 @@ const navMessage = document.getElementById("nav-message");
 
 document.getElementById("logout-button").addEventListener("click", async () => {
   await api("/api/logout", "POST");
-  window.location.href = "/admin";
+  window.location.href = "/login";
 });
 
 searchInput.addEventListener("input", () => {
@@ -21,7 +21,7 @@ searchInput.addEventListener("input", () => {
 async function init() {
   const settings = await api("/api/user-settings", "GET");
   if (!settings.ok) {
-    window.location.href = "/admin";
+    window.location.href = "/login";
     return;
   }
   state.settings = settings.settings;
@@ -32,7 +32,7 @@ async function init() {
 async function loadLinks() {
   const result = await api("/api/links", "GET");
   if (!result.ok) {
-    window.location.href = "/admin";
+    window.location.href = "/login";
     return;
   }
   state.links = result.links || [];

@@ -20,14 +20,31 @@ class NaviHubAppTests(unittest.TestCase):
     def tearDown(self):
         self.temp_dir.cleanup()
 
-    def test_navigation_requires_login_and_admin_page_is_public(self):
+    def test_navigation_and_admin_require_login_while_login_page_is_public(self):
         home = self.request("GET", "/")
         self.assertEqual(home["status"], "302 Found")
-        self.assertEqual(home["headers"]["Location"], "/admin")
+        self.assertEqual(home["headers"]["Location"], "/login")
+
+        admin = self.request("GET", "/admin")
+        self.assertEqual(admin["status"], "302 Found")
+        self.assertEqual(admin["headers"]["Location"], "/login")
+
+        login = self.request("GET", "/login")
+        self.assertEqual(login["status"], "200 OK")
+        self.assertIn("NaviHub Login", login["text"])
+        self.assertIn("Personal navigation page", login["text"])
+
+    def test_admin_page_is_available_after_login(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
 
         admin = self.request("GET", "/admin")
         self.assertEqual(admin["status"], "200 OK")
-        self.assertIn("Manage your homepage", admin["text"])
+        self.assertIn("Personal Settings", admin["text"])
 
     def test_first_registered_user_becomes_global_admin(self):
         register = self.request(
@@ -41,7 +58,7 @@ class NaviHubAppTests(unittest.TestCase):
 
         site_admin = self.request("GET", "/site-admin")
         self.assertEqual(site_admin["status"], "200 OK")
-        self.assertIn("site controls", site_admin["text"])
+        self.assertIn("Site Controls", site_admin["text"])
 
     def test_registration_enforces_password_rules(self):
         too_simple = self.request(
