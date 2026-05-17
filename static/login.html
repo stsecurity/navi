@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NaviHub Login</title>
+    <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body class="admin-body" data-page="login" data-theme="day" data-accent="amber" data-layout="cozy" data-background="sunrise">
@@ -174,9 +175,14 @@
                 <label>
                   <span>Layout density</span>
                   <select id="layout">
-                    <option value="cozy">Cozy</option>
-                    <option value="compact">Compact</option>
+                    <option value="cozy">Cozy - full cards</option>
+                    <option value="compact">Compact - icon and name</option>
                   </select>
+                  <span class="layout-preview" id="layout-preview" aria-hidden="true">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                  </span>
                 </label>
                 <label>
                   <span>Background</span>

@@ -25,14 +25,26 @@ document.getElementById("default-theme").addEventListener("change", () => {
   syncBackgroundOptions("default-theme", "default-background");
 });
 
+document.getElementById("default-layout").addEventListener("change", () => {
+  updateLayoutPreview("default-layout", "default-layout-preview");
+});
+
 document.querySelectorAll("[data-site-tab]").forEach((button) => {
   button.addEventListener("click", () => setSiteTab(button.dataset.siteTab));
 });
 
 siteConfigForm.addEventListener("submit", async (event) => {
   event.preventDefault();
+  const uploadedFavicon = await uploadOptionalFile("favicon", "favicon-file", "favicon-message");
+  if (uploadedFavicon && !uploadedFavicon.ok) {
+    return;
+  }
+  if (uploadedFavicon && uploadedFavicon.url) {
+    document.getElementById("favicon-url").value = uploadedFavicon.url;
+  }
   const payload = {
     site_title: document.getElementById("site-title").value.trim(),
+    favicon_url: document.getElementById("favicon-url").value.trim(),
     external_base_url: document.getElementById("external-base-url").value.trim(),
     registration_open: document.getElementById("registration-open").value === "true",
     s3_settings: {
@@ -83,6 +95,7 @@ siteConfigForm.addEventListener("submit", async (event) => {
   state.config = result.config;
   state.uploadEnabled = s3UploadEnabled(result.config.s3_settings);
   applyConfig(result.config);
+  document.getElementById("favicon-file").value = "";
   message("site-config-message", "Site settings saved.");
 });
 
@@ -187,11 +200,14 @@ function applyConfig(config) {
   document.title = `${config.site_title} Site Admin`;
   document.getElementById("site-admin-title").textContent = `${config.site_title} Site Controls`;
   document.getElementById("site-title").value = config.site_title;
+  document.getElementById("favicon-url").value = config.favicon_url || "";
+  document.querySelector("link[rel='icon']").href = config.favicon_url || "/favicon.ico";
   document.getElementById("external-base-url").value = config.oauth_settings.external_base_url || "";
   document.getElementById("registration-open").value = String(config.registration_open);
   document.getElementById("default-theme").value = config.default_user_settings.theme;
   document.getElementById("default-accent").value = config.default_user_settings.accent;
   document.getElementById("default-layout").value = config.default_user_settings.layout;
+  updateLayoutPreview("default-layout", "default-layout-preview");
   syncBackgroundOptions("default-theme", "default-background", config.default_user_settings.background);
   document.getElementById("s3-endpoint-url").value = config.s3_settings.endpoint_url;
   document.getElementById("s3-region").value = config.s3_settings.region;
@@ -241,6 +257,14 @@ function syncBackgroundOptions(themeSelectId, backgroundSelectId, preferredValue
 
   const allowed = choices.some((choice) => choice.value === currentValue);
   select.value = allowed ? currentValue : choices[0]?.value || "";
+}
+
+function updateLayoutPreview(selectId, previewId) {
+  const preview = document.getElementById(previewId);
+  if (!preview) {
+    return;
+  }
+  preview.dataset.layout = document.getElementById(selectId).value;
 }
 
 function renderAccounts() {
@@ -442,7 +466,7 @@ async function uploadOptionalFile(kind, inputOrId, messageId) {
   if (!file) {
     return null;
   }
-  if (!state.uploadEnabled) {
+  if (kind !== "favicon" && !state.uploadEnabled) {
     message(messageId, "S3 uploads are not configured yet.");
     return { ok: false };
   }
@@ -454,7 +478,7 @@ async function uploadOptionalFile(kind, inputOrId, messageId) {
     message(messageId, result.error);
     return { ok: false };
   }
-  message(messageId, "Icon uploaded.");
+  message(messageId, kind === "favicon" && result.upload.storage === "local" ? "Favicon uploaded to local storage." : "Image uploaded.");
   return { ok: true, url: result.upload.url };
 }
 

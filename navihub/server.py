@@ -33,6 +33,7 @@ DEFAULT_DB_PATH = BASE_DIR / "data" / "navihub.db"
 DEFAULT_STATIC_DIR = BASE_DIR / "static"
 
 DEFAULT_SITE_TITLE = "NaviHub"
+DEFAULT_FAVICON_URL = ""
 DEFAULT_USER_SETTINGS = {
     "theme": "day",
     "accent": "amber",
@@ -257,6 +258,11 @@ def file_extension(filename, content_type):
     return guessed or ".bin"
 
 
+def sanitize_local_upload_path(relative_path):
+    parts = [part for part in Path(relative_path).parts if part not in {"", ".", ".."}]
+    return Path(*parts) if parts else Path()
+
+
 def build_public_object_url(settings, key):
     base = (settings.get("public_base_url") or "").strip().rstrip("/")
     if base:
@@ -278,6 +284,17 @@ def validate_s3_settings(payload):
     if any(filled) and not all(filled):
         raise ValueError("Complete all required S3 settings or leave them all blank.")
     return cleaned
+
+
+def validate_favicon_url(value):
+    url = str(value or "").strip()
+    if not url:
+        return ""
+    if url.startswith("/"):
+        return url
+    if url.startswith(("http://", "https://")):
+        return url
+    raise ValueError("Favicon URL must be empty, a local path, or an http:// or https:// URL.")
 
 
 def sign_s3_request(method, endpoint_url, region, access_key_id, secret_access_key, bucket, key, payload, content_type):
@@ -487,6 +504,7 @@ def init_db(db_path):
 
         defaults = {
             "site_title": DEFAULT_SITE_TITLE,
+            "favicon_url": DEFAULT_FAVICON_URL,
             "registration_open": "true",
             "default_user_settings": json.dumps(DEFAULT_USER_SETTINGS),
             "s3_settings": json.dumps(EMPTY_S3_SETTINGS),
@@ -533,9 +551,10 @@ def init_db(db_path):
 
 
 class NaviHubApp:
-    def __init__(self, db_path=DEFAULT_DB_PATH, static_dir=DEFAULT_STATIC_DIR, enable_favicon_prewarm=True):
+    def __init__(self, db_path=DEFAULT_DB_PATH, static_dir=DEFAULT_STATIC_DIR, upload_dir=None, enable_favicon_prewarm=True):
         self.db_path = str(db_path)
         self.static_dir = Path(static_dir)
+        self.upload_dir = Path(upload_dir) if upload_dir else BASE_DIR / "data" / "uploads"
         self.enable_favicon_prewarm = enable_favicon_prewarm
         init_db(self.db_path)
 
@@ -614,6 +633,10 @@ class NaviHubApp:
                 result = self.serve_site_admin(environ)
             elif path.startswith("/static/"):
                 result = self.serve_static(path.removeprefix("/static/"))
+            elif path.startswith("/uploads/"):
+                result = self.serve_upload(path.removeprefix("/uploads/"))
+            elif path == "/favicon.ico":
+                result = self.serve_favicon()
             elif path == "/api/register" and method == "POST":
                 result = self.register(environ)
             elif path == "/api/login" and method == "POST":
@@ -713,15 +736,17 @@ class NaviHubApp:
         path = self.static_dir / filename
         with self.connect() as conn:
             settings = self.get_user_settings_record(conn, user["id"])
-        return html_response(self.apply_initial_theme(path, settings))
+            site_config = self.load_site_config(conn)
+        return html_response(self.apply_initial_settings(path, settings, site_config))
 
     def serve_default_themed_page(self, filename):
         path = self.static_dir / filename
         with self.connect() as conn:
-            settings = self.load_site_config(conn)["default_user_settings"]
-        return html_response(self.apply_initial_theme(path, settings))
+            site_config = self.load_site_config(conn)
+            settings = site_config["default_user_settings"]
+        return html_response(self.apply_initial_settings(path, settings, site_config))
 
-    def apply_initial_theme(self, path, settings):
+    def apply_initial_settings(self, path, settings, site_config):
         body = path.read_text(encoding="utf-8")
         replacements = {
             "data-theme": settings["theme"],
@@ -750,7 +775,43 @@ class NaviHubApp:
                     body,
                     count=1,
                 )
+        favicon_url = site_config.get("favicon_url") or "/favicon.ico"
+        title = settings["tab_title"]
+        page_name = path.name
+        if page_name == "login.html":
+            title = f"{site_config['site_title']} Login"
+        elif page_name == "site-admin.html":
+            title = f"{site_config['site_title']} Site Admin"
+
+        body = re.sub(r"<title>.*?</title>", f"<title>{html.escape(title)}</title>", body, count=1, flags=re.DOTALL)
+        if 'rel="icon"' in body:
+            body = re.sub(r'<link rel="icon" href="[^"]*" />', f'<link rel="icon" href="{html.escape(favicon_url, quote=True)}" />', body, count=1)
+        else:
+            body = body.replace(
+                '<link rel="stylesheet" href="/static/styles.css" />',
+                f'<link rel="icon" href="{html.escape(favicon_url, quote=True)}" />\n    <link rel="stylesheet" href="/static/styles.css" />',
+                1,
+            )
+
+        if page_name in {"index.html", "admin.html", "login.html"}:
+            replacements = {
+                "nav-eyebrow": site_config["site_title"],
+                "nav-heading": settings["nav_heading"],
+                "nav-copy": settings["nav_copy"],
+                "admin-heading": settings["admin_heading"],
+                "admin-copy": settings["admin_copy"],
+            }
+            for element_id, value in replacements.items():
+                body = self.replace_element_text(body, element_id, value)
+        elif page_name == "site-admin.html":
+            body = self.replace_element_text(body, "site-admin-title", f"{site_config['site_title']} Site Controls")
         return body
+
+    @staticmethod
+    def replace_element_text(body, element_id, value):
+        escaped = html.escape(str(value))
+        pattern = rf'(<[^>]+\bid="{re.escape(element_id)}"[^>]*>)(.*?)(</[^>]+>)'
+        return re.sub(pattern, lambda match: f"{match.group(1)}{escaped}{match.group(3)}", body, count=1, flags=re.DOTALL)
 
     def serve_static(self, relative_path):
         path = (self.static_dir / relative_path).resolve()
@@ -760,6 +821,29 @@ class NaviHubApp:
         if not path.exists() or not path.is_file():
             return json_response(HTTPStatus.NOT_FOUND, {"error": "Not found"})
         return file_response(path)
+
+    def serve_upload(self, relative_path):
+        safe_path = sanitize_local_upload_path(relative_path)
+        path = (self.upload_dir / safe_path).resolve()
+        upload_root = self.upload_dir.resolve()
+        if upload_root not in path.parents and path != upload_root:
+            return json_response(HTTPStatus.FORBIDDEN, {"error": "Forbidden"})
+        if not path.exists() or not path.is_file():
+            return json_response(HTTPStatus.NOT_FOUND, {"error": "Not found"})
+        return file_response(path)
+
+    def serve_favicon(self):
+        with self.connect() as conn:
+            favicon_url = self.load_site_config(conn)["favicon_url"]
+        if favicon_url:
+            return redirect_response(favicon_url)
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+            '<rect width="64" height="64" rx="14" fill="#138ea1"/>'
+            '<path d="M18 44V20h8l12 16V20h8v24h-8L26 28v16z" fill="#fffaf1"/>'
+            "</svg>"
+        )
+        return binary_response(HTTPStatus.OK, svg.encode("utf-8"), "image/svg+xml")
 
     def current_user(self, environ):
         cookies = parse_cookies(environ)
@@ -1073,6 +1157,7 @@ class NaviHubApp:
             HTTPStatus.OK,
             {
                 "site_title": config["site_title"],
+                "favicon_url": config["favicon_url"],
                 "registration_open": config["registration_open"],
             },
         )
@@ -1332,6 +1417,7 @@ class NaviHubApp:
             {
                 "settings": settings,
                 "site_title": site_config["site_title"],
+                "favicon_url": site_config["favicon_url"],
                 "is_admin": bool(user["is_admin"]),
                 "upload_enabled": s3_enabled(site_config["s3_settings"]),
             },
@@ -1360,6 +1446,7 @@ class NaviHubApp:
             current = self.load_site_config(conn)
             config = {
                 "site_title": str(payload.get("site_title", current["site_title"])).strip() or current["site_title"],
+                "favicon_url": validate_favicon_url(payload.get("favicon_url", current["favicon_url"])),
                 "registration_open": bool(payload.get("registration_open", current["registration_open"])),
                 "default_user_settings": self.validate_user_settings(
                     {**current["default_user_settings"], **payload.get("default_user_settings", {})}
@@ -1521,9 +1608,11 @@ class NaviHubApp:
         data, files = parse_multipart_form(environ)
         kind = (data.get("kind") or "").strip().lower()
         upload = files.get("file")
-        if kind not in {"icon", "background"}:
-            raise ValueError("Upload kind must be icon or background.")
-        if not upload or not getattr(upload, "filename", None):
+        if kind not in {"icon", "background", "favicon"}:
+            raise ValueError("Upload kind must be icon, background, or favicon.")
+        if kind == "favicon" and not user["is_admin"]:
+            raise PermissionError("Admin access required.")
+        if upload is None or not getattr(upload, "filename", None):
             raise ValueError("Choose a file to upload.")
         content_type = upload.type or "application/octet-stream"
         if not content_type.startswith("image/"):
@@ -1536,19 +1625,32 @@ class NaviHubApp:
 
         with self.connect() as conn:
             config = self.load_site_config(conn)
-        if not s3_enabled(config["s3_settings"]):
+        if kind != "favicon" and not s3_enabled(config["s3_settings"]):
             raise ValueError("S3 uploads are not configured yet.")
 
         ext = file_extension(upload.filename, content_type)
         key = f"{config['s3_settings']['key_prefix'].strip('/')}/users/{user['id']}/{kind}s/{secrets.token_hex(12)}{ext}"
-        try:
-            upload_to_s3(config["s3_settings"], key, payload, content_type)
-        except Exception as exc:
-            raise ValueError(f"S3 upload failed: {exc}") from exc
+        if s3_enabled(config["s3_settings"]):
+            try:
+                upload_to_s3(config["s3_settings"], key, payload, content_type)
+                return json_response(
+                    HTTPStatus.CREATED,
+                    {"upload": {"kind": kind, "key": key, "url": build_public_object_url(config["s3_settings"], key), "storage": "s3"}},
+                )
+            except Exception as exc:
+                if kind != "favicon":
+                    raise ValueError(f"S3 upload failed: {exc}") from exc
 
+        if kind != "favicon":
+            raise ValueError("S3 uploads are not configured yet.")
+
+        local_key = f"favicons/{secrets.token_hex(12)}{ext}"
+        local_path = self.upload_dir / sanitize_local_upload_path(local_key)
+        ensure_parent(local_path)
+        local_path.write_bytes(payload)
         return json_response(
             HTTPStatus.CREATED,
-            {"upload": {"kind": kind, "key": key, "url": build_public_object_url(config["s3_settings"], key)}},
+            {"upload": {"kind": kind, "key": local_key, "url": f"/uploads/{quote(local_key, safe='/')}", "storage": "local"}},
         )
 
     def delete_default_link(self, environ, path):
@@ -1662,6 +1764,7 @@ class NaviHubApp:
                 oauth_settings = DEFAULT_OAUTH_SETTINGS
         return {
             "site_title": raw.get("site_title", DEFAULT_SITE_TITLE),
+            "favicon_url": validate_favicon_url(raw.get("favicon_url", DEFAULT_FAVICON_URL)),
             "registration_open": raw.get("registration_open", "true").lower() == "true",
             "default_user_settings": default_settings,
             "s3_settings": s3_settings,
@@ -1671,6 +1774,7 @@ class NaviHubApp:
     def save_site_config(self, conn, config):
         pairs = {
             "site_title": config["site_title"],
+            "favicon_url": config.get("favicon_url", DEFAULT_FAVICON_URL),
             "registration_open": "true" if config["registration_open"] else "false",
             "default_user_settings": json.dumps(config["default_user_settings"]),
             "s3_settings": json.dumps(config["s3_settings"]),
@@ -1735,6 +1839,7 @@ def create_app(config=None):
     return NaviHubApp(
         db_path=config.get("db_path", DEFAULT_DB_PATH),
         static_dir=config.get("static_dir", DEFAULT_STATIC_DIR),
+        upload_dir=config.get("upload_dir"),
         enable_favicon_prewarm=config.get("enable_favicon_prewarm", True),
     )
 

@@ -25,7 +25,7 @@ async function init() {
     return;
   }
   state.settings = settings.settings;
-  applySettings(settings.settings, settings.site_title);
+  applySettings(settings.settings, settings.site_title, settings.favicon_url);
   await loadLinks();
 }
 
@@ -81,7 +81,7 @@ function renderLinks() {
   bindIconFallbacks(tileGrid);
 }
 
-function applySettings(settings, siteTitle) {
+function applySettings(settings, siteTitle, faviconUrl) {
   document.body.dataset.theme = settings.theme;
   document.body.dataset.accent = settings.accent;
   document.body.dataset.layout = settings.layout;
@@ -91,6 +91,7 @@ function applySettings(settings, siteTitle) {
     settings.background === "custom" && settings.custom_background_url ? `url("${String(settings.custom_background_url).replace(/"/g, '\\"')}")` : "none"
   );
   document.title = settings.tab_title || siteTitle;
+  document.querySelector("link[rel='icon']").href = faviconUrl || "/favicon.ico";
   document.getElementById("nav-heading").textContent = settings.nav_heading;
   document.getElementById("nav-copy").textContent = settings.nav_copy;
   document.getElementById("nav-eyebrow").textContent = siteTitle;

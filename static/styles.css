@@ -419,6 +419,43 @@ textarea {
   font-size: 0.98rem;
 }
 
+.layout-preview {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  min-height: 62px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.42);
+}
+
+body[data-theme="night"] .layout-preview {
+  background: rgba(15, 23, 36, 0.42);
+}
+
+.layout-preview span {
+  display: grid;
+  min-width: 0;
+  border-radius: 10px;
+  background:
+    radial-gradient(circle at 14px 14px, var(--accent) 0 7px, transparent 8px),
+    linear-gradient(var(--accent-strong), var(--accent-strong)) 28px 12px / calc(100% - 38px) 6px no-repeat,
+    linear-gradient(var(--muted), var(--muted)) 10px 34px / calc(100% - 20px) 5px no-repeat,
+    linear-gradient(var(--muted), var(--muted)) 10px 46px / 55% 5px no-repeat,
+    var(--panel-strong);
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  box-shadow: var(--tile-shadow);
+}
+
+.layout-preview[data-layout="compact"] span {
+  min-height: 38px;
+  background:
+    radial-gradient(circle at 14px 19px, var(--accent) 0 7px, transparent 8px),
+    linear-gradient(var(--accent-strong), var(--accent-strong)) 30px 16px / calc(100% - 40px) 6px no-repeat,
+    var(--panel-strong);
+}
+
 body[data-theme="night"] input,
 body[data-theme="night"] select,
 body[data-theme="night"] textarea {
@@ -871,6 +908,38 @@ body[data-theme="night"] .nav-tile {
 .nav-tile span {
   color: var(--accent-strong);
   word-break: break-word;
+}
+
+body[data-layout="compact"] .tile-grid {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+body[data-layout="compact"] .nav-tile {
+  min-height: 118px;
+  padding: 16px;
+  gap: 8px;
+  align-content: center;
+}
+
+body[data-layout="compact"] .nav-tile-head {
+  align-items: center;
+}
+
+body[data-layout="compact"] .tile-icon-wrap {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+body[data-layout="compact"] .nav-tile h2 {
+  font-size: 1.05rem;
+  line-height: 1.15;
+}
+
+body[data-layout="compact"] .nav-tile p,
+body[data-layout="compact"] .nav-tile span {
+  display: none;
 }
 
 .quick-panel a {

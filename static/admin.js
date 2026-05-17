@@ -310,6 +310,7 @@ async function loadUserSettings() {
   state.settings = result.settings;
   state.siteTitle = result.site_title;
   state.uploadEnabled = result.upload_enabled;
+  document.querySelector("link[rel='icon']").href = result.favicon_url || "/favicon.ico";
   applySettings(state.settings);
   fillSettingsForm(state.settings);
   bindPreviewListeners();
@@ -319,6 +320,7 @@ async function loadSiteConfig() {
   const result = await api("/api/public-config", "GET");
   state.registrationOpen = result.ok ? result.registration_open : true;
   state.siteTitle = result.ok ? result.site_title : "NaviHub";
+  document.querySelector("link[rel='icon']").href = result.ok && result.favicon_url ? result.favicon_url : "/favicon.ico";
   updateRegistrationState();
 }
 
@@ -885,6 +887,7 @@ function fillSettingsForm(settings) {
   document.getElementById("theme").value = settings.theme;
   document.getElementById("accent").value = settings.accent;
   document.getElementById("layout").value = settings.layout;
+  updateLayoutPreview("layout", "layout-preview");
   syncBackgroundOptions("theme", "background", settings.background);
   document.getElementById("tab-title").value = settings.tab_title;
   document.getElementById("settings-admin-heading").value = settings.admin_heading;
@@ -910,6 +913,9 @@ function bindPreviewListeners() {
     }
     element.addEventListener("input", previewAppearance);
     element.addEventListener("change", previewAppearance);
+    if (id === "layout") {
+      element.addEventListener("change", () => updateLayoutPreview("layout", "layout-preview"));
+    }
     element.dataset.previewBound = "true";
   });
   const backgroundFile = document.getElementById("background-file");
@@ -922,6 +928,7 @@ function bindPreviewListeners() {
 
 function previewAppearance() {
   syncBackgroundOptions("theme", "background");
+  updateLayoutPreview("layout", "layout-preview");
   const previewSettings = {
     ...state.settings,
     theme: document.getElementById("theme").value,
@@ -932,6 +939,14 @@ function previewAppearance() {
   };
   applySettings(previewSettings, { preserveText: true, preserveTitle: true });
   settingsMessage.textContent = "Previewing appearance changes. Click Save settings to keep them.";
+}
+
+function updateLayoutPreview(selectId, previewId) {
+  const preview = document.getElementById(previewId);
+  if (!preview) {
+    return;
+  }
+  preview.dataset.layout = document.getElementById(selectId).value;
 }
 
 function previewBackgroundFile() {

@@ -14,7 +14,8 @@ class NaviHubAppTests(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.db_path = Path(self.temp_dir.name) / "test.db"
-        self.app = create_app({"db_path": self.db_path, "static_dir": BASE_DIR / "static", "enable_favicon_prewarm": False})
+        self.upload_dir = Path(self.temp_dir.name) / "uploads"
+        self.app = create_app({"db_path": self.db_path, "static_dir": BASE_DIR / "static", "upload_dir": self.upload_dir, "enable_favicon_prewarm": False})
         self.cookie = None
 
     def tearDown(self):
@@ -226,6 +227,9 @@ class NaviHubAppTests(unittest.TestCase):
         navigation = self.request("GET", "/")
         self.assertIn('data-theme="night"', navigation["text"])
         self.assertIn('data-accent="cyan"', navigation["text"])
+        self.assertIn("<title>Night Board</title>", navigation["text"])
+        self.assertIn(">Launchpad</h1>", navigation["text"])
+        self.assertIn(">Everything important in one place.</p>", navigation["text"])
 
         site_admin = self.request("GET", "/site-admin")
         self.assertIn('data-theme="night"', site_admin["text"])
@@ -367,6 +371,43 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertFalse(config["json"]["config"]["registration_open"])
         self.assertEqual(config["json"]["config"]["site_title"], "My Portal")
 
+        favicon_upload = self.multipart_request(
+            "POST",
+            "/api/uploads",
+            fields={"kind": "favicon"},
+            files={"file": ("favicon.svg", "image/svg+xml", b"<svg></svg>")},
+        )
+        self.assertEqual(favicon_upload["status"], "201 Created")
+        self.assertEqual(favicon_upload["json"]["upload"]["storage"], "local")
+        favicon_url = favicon_upload["json"]["upload"]["url"]
+        self.assertTrue(favicon_url.startswith("/uploads/favicons/"))
+        self.assertTrue((self.upload_dir / favicon_upload["json"]["upload"]["key"]).exists())
+
+        favicon_config = self.request(
+            "PUT",
+            "/api/site-admin/config",
+            {
+                "site_title": "My Portal",
+                "favicon_url": favicon_url,
+                "registration_open": False,
+                "default_user_settings": {
+                    "theme": "night",
+                    "accent": "pink",
+                    "layout": "compact",
+                    "background": "midnight",
+                    "tab_title": "Portal Start",
+                    "admin_heading": "Admin",
+                    "admin_copy": "Admin intro copy",
+                    "nav_heading": "Nav heading",
+                    "nav_copy": "Nav copy",
+                },
+            },
+        )
+        self.assertEqual(favicon_config["status"], "200 OK")
+        self.assertEqual(favicon_config["json"]["config"]["favicon_url"], favicon_url)
+        site_admin_page = self.request("GET", "/site-admin")
+        self.assertIn(f'<link rel="icon" href="{favicon_url}" />', site_admin_page["text"])
+
         blocked = self.request(
             "POST",
             "/api/register",
@@ -476,6 +517,52 @@ class NaviHubAppTests(unittest.TestCase):
             "PATH_INFO": path,
             "CONTENT_LENGTH": str(len(body)),
             "CONTENT_TYPE": "application/json",
+            "wsgi.input": io.BytesIO(body),
+            "HTTP_COOKIE": self.cookie if cookie == "USE_STATE" else (cookie or ""),
+        }
+
+        captured = {}
+
+        def start_response(status, headers):
+            captured["status"] = status
+            captured["headers"] = dict(headers)
+
+        response_body = b"".join(self.app(environ, start_response))
+        captured["text"] = response_body.decode("utf-8")
+        if captured["headers"].get("Content-Type", "").startswith("application/json"):
+            captured["json"] = json.loads(captured["text"])
+        return captured
+
+    def multipart_request(self, method, path, fields=None, files=None, cookie="USE_STATE"):
+        boundary = "----NaviHubTestBoundary"
+        chunks = []
+        for name, value in (fields or {}).items():
+            chunks.extend(
+                [
+                    f"--{boundary}\r\n".encode("utf-8"),
+                    f'Content-Disposition: form-data; name="{name}"\r\n\r\n'.encode("utf-8"),
+                    str(value).encode("utf-8"),
+                    b"\r\n",
+                ]
+            )
+        for name, (filename, content_type, content) in (files or {}).items():
+            chunks.extend(
+                [
+                    f"--{boundary}\r\n".encode("utf-8"),
+                    f'Content-Disposition: form-data; name="{name}"; filename="{filename}"\r\n'.encode("utf-8"),
+                    f"Content-Type: {content_type}\r\n\r\n".encode("utf-8"),
+                    content,
+                    b"\r\n",
+                ]
+            )
+        chunks.append(f"--{boundary}--\r\n".encode("utf-8"))
+        body = b"".join(chunks)
+
+        environ = {
+            "REQUEST_METHOD": method,
+            "PATH_INFO": path,
+            "CONTENT_LENGTH": str(len(body)),
+            "CONTENT_TYPE": f"multipart/form-data; boundary={boundary}",
             "wsgi.input": io.BytesIO(body),
             "HTTP_COOKIE": self.cookie if cookie == "USE_STATE" else (cookie or ""),
         }

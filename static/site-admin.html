@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>NaviHub Site Admin</title>
+    <link rel="icon" href="/favicon.ico" />
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
   <body data-theme="day" data-accent="amber" data-layout="cozy" data-background="sunrise">
@@ -44,6 +45,15 @@
                 <input id="site-title" type="text" required />
               </label>
               <label class="wide">
+                <span>Favicon</span>
+                <input id="favicon-url" type="text" placeholder="/favicon.ico" />
+              </label>
+              <label class="wide">
+                <span>Upload favicon image</span>
+                <input id="favicon-file" type="file" accept="image/*,.ico" />
+              </label>
+              <p class="message wide" id="favicon-message">Upload an image to use as the browser tab icon.</p>
+              <label class="wide">
                 <span>External base URL</span>
                 <input id="external-base-url" type="url" placeholder="https://navihub.example.com" />
               </label>
@@ -75,9 +85,14 @@
               <label>
                 <span>Default layout</span>
                 <select id="default-layout">
-                  <option value="cozy">Cozy</option>
-                  <option value="compact">Compact</option>
+                  <option value="cozy">Cozy - full cards</option>
+                  <option value="compact">Compact - icon and name</option>
                 </select>
+                <span class="layout-preview" id="default-layout-preview" aria-hidden="true">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </span>
               </label>
               <label>
                 <span>Default background</span>
