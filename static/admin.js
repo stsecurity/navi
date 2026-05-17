@@ -310,7 +310,7 @@ async function loadUserSettings() {
   state.settings = result.settings;
   state.siteTitle = result.site_title;
   state.uploadEnabled = result.upload_enabled;
-  document.querySelector("link[rel='icon']").href = result.favicon_url || "/favicon.ico";
+  document.querySelector("link[rel='icon']").href = faviconHref(result.favicon_url);
   applySettings(state.settings);
   fillSettingsForm(state.settings);
   bindPreviewListeners();
@@ -320,7 +320,7 @@ async function loadSiteConfig() {
   const result = await api("/api/public-config", "GET");
   state.registrationOpen = result.ok ? result.registration_open : true;
   state.siteTitle = result.ok ? result.site_title : "NaviHub";
-  document.querySelector("link[rel='icon']").href = result.ok && result.favicon_url ? result.favicon_url : "/favicon.ico";
+  document.querySelector("link[rel='icon']").href = faviconHref(result.ok ? result.favicon_url : "");
   updateRegistrationState();
 }
 
@@ -950,6 +950,10 @@ function updateLayoutPreview(selectId, previewId) {
   const cardCount = layout === "compact" ? 4 : 3;
   preview.dataset.layout = layout;
   preview.innerHTML = Array.from({ length: cardCount }, () => "<span></span>").join("");
+}
+
+function faviconHref(url) {
+  return url && url.startsWith("/") ? url : "/favicon.ico";
 }
 
 function previewBackgroundFile() {

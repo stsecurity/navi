@@ -14,7 +14,7 @@ import threading
 from socketserver import ThreadingMixIn
 from http import HTTPStatus
 from pathlib import Path
-from urllib.parse import parse_qs, quote, urljoin, urlparse
+from urllib.parse import parse_qs, quote, unquote, urljoin, urlparse
 from urllib.request import Request, urlopen
 from wsgiref.simple_server import WSGIServer, make_server
 
@@ -374,6 +374,40 @@ def upload_to_s3(settings, key, payload, content_type):
     with urlopen(request, timeout=30) as response:
         if response.status >= 300:
             raise ValueError("Upload failed.")
+
+
+def fetch_s3_object(settings, key):
+    signed = sign_s3_request(
+        "GET",
+        settings["endpoint_url"],
+        settings["region"],
+        settings["access_key_id"],
+        settings["secret_access_key"],
+        settings["bucket"],
+        key,
+        b"",
+        "application/octet-stream",
+    )
+    request = Request(signed["url"], method="GET", headers=signed["headers"])
+    with urlopen(request, timeout=20) as response:
+        return response.read(), response.headers.get_content_type() or "image/x-icon"
+
+
+def s3_key_from_public_url(settings, public_url):
+    parsed = urlparse(public_url)
+    if not parsed.scheme or not parsed.netloc:
+        return ""
+
+    public_base_url = (settings.get("public_base_url") or "").strip().rstrip("/")
+    if public_base_url and public_url.startswith(f"{public_base_url}/"):
+        return unquote(public_url[len(public_base_url) + 1 :])
+
+    endpoint = settings.get("endpoint_url", "").rstrip("/")
+    bucket = settings.get("bucket", "")
+    expected_base = f"{endpoint}/{quote(bucket)}"
+    if endpoint and bucket and public_url.startswith(f"{expected_base}/"):
+        return unquote(public_url[len(expected_base) + 1 :])
+    return ""
 
 
 class ThreadingWSGIServer(ThreadingMixIn, WSGIServer):
@@ -776,6 +810,7 @@ class NaviHubApp:
                     count=1,
                 )
         favicon_url = site_config.get("favicon_url") or "/favicon.ico"
+        favicon_href = favicon_url if favicon_url.startswith("/") else "/favicon.ico"
         title = settings["tab_title"]
         page_name = path.name
         if page_name == "login.html":
@@ -785,11 +820,11 @@ class NaviHubApp:
 
         body = re.sub(r"<title>.*?</title>", f"<title>{html.escape(title)}</title>", body, count=1, flags=re.DOTALL)
         if 'rel="icon"' in body:
-            body = re.sub(r'<link rel="icon" href="[^"]*" />', f'<link rel="icon" href="{html.escape(favicon_url, quote=True)}" />', body, count=1)
+            body = re.sub(r'<link rel="icon" href="[^"]*" />', f'<link rel="icon" href="{html.escape(favicon_href, quote=True)}" />', body, count=1)
         else:
             body = body.replace(
                 '<link rel="stylesheet" href="/static/styles.css" />',
-                f'<link rel="icon" href="{html.escape(favicon_url, quote=True)}" />\n    <link rel="stylesheet" href="/static/styles.css" />',
+                f'<link rel="icon" href="{html.escape(favicon_href, quote=True)}" />\n    <link rel="stylesheet" href="/static/styles.css" />',
                 1,
             )
 
@@ -834,8 +869,22 @@ class NaviHubApp:
 
     def serve_favicon(self):
         with self.connect() as conn:
-            favicon_url = self.load_site_config(conn)["favicon_url"]
+            config = self.load_site_config(conn)
+            favicon_url = config["favicon_url"]
+        if favicon_url == "/favicon.ico":
+            favicon_url = ""
+        if favicon_url.startswith("/uploads/"):
+            return self.serve_upload(favicon_url.removeprefix("/uploads/"))
+        if favicon_url.startswith("/"):
+            return redirect_response(favicon_url)
         if favicon_url:
+            s3_key = s3_key_from_public_url(config["s3_settings"], favicon_url)
+            if s3_key and s3_enabled(config["s3_settings"]):
+                try:
+                    body, content_type = fetch_s3_object(config["s3_settings"], s3_key)
+                    return binary_response(HTTPStatus.OK, body, content_type)
+                except Exception:
+                    pass
             return redirect_response(favicon_url)
         svg = (
             '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
@@ -1630,6 +1679,32 @@ class NaviHubApp:
 
         ext = file_extension(upload.filename, content_type)
         key = f"{config['s3_settings']['key_prefix'].strip('/')}/users/{user['id']}/{kind}s/{secrets.token_hex(12)}{ext}"
+        if kind == "favicon":
+            local_key = f"favicons/{secrets.token_hex(12)}{ext}"
+            local_path = self.upload_dir / sanitize_local_upload_path(local_key)
+            ensure_parent(local_path)
+            local_path.write_bytes(payload)
+            upload_result = {
+                "kind": kind,
+                "key": local_key,
+                "url": f"/uploads/{quote(local_key, safe='/')}",
+                "storage": "local",
+                "s3_uploaded": False,
+            }
+            if s3_enabled(config["s3_settings"]):
+                try:
+                    upload_to_s3(config["s3_settings"], key, payload, content_type)
+                    upload_result.update(
+                        {
+                            "s3_uploaded": True,
+                            "s3_key": key,
+                            "s3_url": build_public_object_url(config["s3_settings"], key),
+                        }
+                    )
+                except Exception:
+                    pass
+            return json_response(HTTPStatus.CREATED, {"upload": upload_result})
+
         if s3_enabled(config["s3_settings"]):
             try:
                 upload_to_s3(config["s3_settings"], key, payload, content_type)
@@ -1643,15 +1718,6 @@ class NaviHubApp:
 
         if kind != "favicon":
             raise ValueError("S3 uploads are not configured yet.")
-
-        local_key = f"favicons/{secrets.token_hex(12)}{ext}"
-        local_path = self.upload_dir / sanitize_local_upload_path(local_key)
-        ensure_parent(local_path)
-        local_path.write_bytes(payload)
-        return json_response(
-            HTTPStatus.CREATED,
-            {"upload": {"kind": kind, "key": local_key, "url": f"/uploads/{quote(local_key, safe='/')}", "storage": "local"}},
-        )
 
     def delete_default_link(self, environ, path):
         self.require_admin(environ)

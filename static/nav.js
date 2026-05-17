@@ -91,7 +91,7 @@ function applySettings(settings, siteTitle, faviconUrl) {
     settings.background === "custom" && settings.custom_background_url ? `url("${String(settings.custom_background_url).replace(/"/g, '\\"')}")` : "none"
   );
   document.title = settings.tab_title || siteTitle;
-  document.querySelector("link[rel='icon']").href = faviconUrl || "/favicon.ico";
+  document.querySelector("link[rel='icon']").href = faviconHref(faviconUrl);
   document.getElementById("nav-heading").textContent = settings.nav_heading;
   document.getElementById("nav-copy").textContent = settings.nav_copy;
   document.getElementById("nav-eyebrow").textContent = siteTitle;
@@ -124,6 +124,10 @@ function escapeHtml(value) {
 
 function escapeAttribute(value) {
   return escapeHtml(value);
+}
+
+function faviconHref(url) {
+  return url && url.startsWith("/") ? url : "/favicon.ico";
 }
 
 function bindIconFallbacks(root) {

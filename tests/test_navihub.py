@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from navihub.server import create_app
 
@@ -230,6 +231,7 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertIn("<title>Night Board</title>", navigation["text"])
         self.assertIn(">Launchpad</h1>", navigation["text"])
         self.assertIn(">Everything important in one place.</p>", navigation["text"])
+        self.assertNotIn("Quick Note", navigation["text"])
 
         site_admin = self.request("GET", "/site-admin")
         self.assertIn('data-theme="night"', site_admin["text"])
@@ -407,6 +409,76 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertEqual(favicon_config["json"]["config"]["favicon_url"], favicon_url)
         site_admin_page = self.request("GET", "/site-admin")
         self.assertIn(f'<link rel="icon" href="{favicon_url}" />', site_admin_page["text"])
+
+        s3_config = self.request(
+            "PUT",
+            "/api/site-admin/config",
+            {
+                "site_title": "My Portal",
+                "registration_open": False,
+                "default_user_settings": {
+                    "theme": "night",
+                    "accent": "pink",
+                    "layout": "compact",
+                    "background": "midnight",
+                    "tab_title": "Portal Start",
+                    "admin_heading": "Admin",
+                    "admin_copy": "Admin intro copy",
+                    "nav_heading": "Nav heading",
+                    "nav_copy": "Nav copy",
+                },
+                "s3_settings": {
+                    "endpoint_url": "https://s3.example.com",
+                    "bucket": "private-assets",
+                    "access_key_id": "access-key",
+                    "secret_access_key": "secret-key",
+                    "key_prefix": "navihub",
+                },
+            },
+        )
+        self.assertEqual(s3_config["status"], "200 OK")
+        with patch("navihub.server.upload_to_s3") as s3_upload:
+            s3_favicon_upload = self.multipart_request(
+                "POST",
+                "/api/uploads",
+                fields={"kind": "favicon"},
+                files={"file": ("favicon.svg", "image/svg+xml", b"<svg></svg>")},
+            )
+        self.assertEqual(s3_favicon_upload["status"], "201 Created")
+        self.assertTrue(s3_upload.called)
+        self.assertEqual(s3_favicon_upload["json"]["upload"]["storage"], "local")
+        self.assertTrue(s3_favicon_upload["json"]["upload"]["s3_uploaded"])
+        self.assertTrue(s3_favicon_upload["json"]["upload"]["url"].startswith("/uploads/favicons/"))
+        self.assertIn("s3_url", s3_favicon_upload["json"]["upload"])
+
+        s3_favicon_config = self.request(
+            "PUT",
+            "/api/site-admin/config",
+            {
+                "site_title": "My Portal",
+                "favicon_url": s3_favicon_upload["json"]["upload"]["s3_url"],
+                "registration_open": False,
+                "default_user_settings": {
+                    "theme": "night",
+                    "accent": "pink",
+                    "layout": "compact",
+                    "background": "midnight",
+                    "tab_title": "Portal Start",
+                    "admin_heading": "Admin",
+                    "admin_copy": "Admin intro copy",
+                    "nav_heading": "Nav heading",
+                    "nav_copy": "Nav copy",
+                },
+            },
+        )
+        self.assertEqual(s3_favicon_config["status"], "200 OK")
+        site_admin_page = self.request("GET", "/site-admin")
+        self.assertIn('<link rel="icon" href="/favicon.ico" />', site_admin_page["text"])
+        with patch("navihub.server.fetch_s3_object", return_value=(b"<svg></svg>", "image/svg+xml")) as s3_fetch:
+            proxied_favicon = self.request("GET", "/favicon.ico")
+        self.assertEqual(proxied_favicon["status"], "200 OK")
+        self.assertTrue(s3_fetch.called)
+        self.assertEqual(proxied_favicon["headers"]["Content-Type"], "image/svg+xml")
 
         blocked = self.request(
             "POST",

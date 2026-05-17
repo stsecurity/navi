@@ -201,7 +201,7 @@ function applyConfig(config) {
   document.getElementById("site-admin-title").textContent = `${config.site_title} Site Controls`;
   document.getElementById("site-title").value = config.site_title;
   document.getElementById("favicon-url").value = config.favicon_url || "";
-  document.querySelector("link[rel='icon']").href = config.favicon_url || "/favicon.ico";
+  document.querySelector("link[rel='icon']").href = faviconHref(config.favicon_url);
   document.getElementById("external-base-url").value = config.oauth_settings.external_base_url || "";
   document.getElementById("registration-open").value = String(config.registration_open);
   document.getElementById("default-theme").value = config.default_user_settings.theme;
@@ -514,6 +514,10 @@ function initials(value) {
 
 function s3UploadEnabled(settings) {
   return Boolean(settings?.endpoint_url && settings?.bucket && settings?.access_key_id && settings?.secret_access_key);
+}
+
+function faviconHref(url) {
+  return url && url.startsWith("/") ? url : "/favicon.ico";
 }
 
 async function api(url, method, body, isForm = false) {
