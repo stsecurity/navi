@@ -615,9 +615,10 @@ body[data-theme="night"] .bookmark-import {
 .bookmark-preview {
   display: grid;
   gap: 8px;
-  max-height: 360px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  height: 360px;
+  min-height: 180px;
+  resize: vertical;
+  overflow: auto;
 }
 
 .bookmark-folder {
