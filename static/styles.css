@@ -831,6 +831,13 @@ body[data-theme="night"] .bookmark-row {
   object-fit: cover;
 }
 
+.tile-icon-image,
+.tile-icon-fallback {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .tile-icon-fallback {
   display: none;
   width: 100%;
@@ -982,6 +989,9 @@ body.nav-body[data-layout="compact"] .tile-icon-wrap {
 body.nav-body[data-layout="compact"] .nav-tile h2 {
   font-size: 1.18rem;
   line-height: 1.18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.nav-body[data-layout="compact"] .nav-tile p,
@@ -1068,13 +1078,16 @@ body.nav-body[data-layout="simple"] .tile-icon-fallback {
 
 body.nav-body[data-layout="icons"] .nav-tile h2,
 body.nav-body[data-layout="simple"] .nav-tile h2 {
+  width: 100%;
   max-width: 120px;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 1.02rem;
   font-weight: 500;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.nav-body[data-layout="icons"] .nav-tile p,
