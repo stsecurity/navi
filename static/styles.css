@@ -1031,6 +1031,14 @@ body.nav-body[data-layout="simple"] .nav-tile:hover {
   user-select: none;
 }
 
+.sort-placeholder {
+  min-height: 72px;
+  border: 2px dashed rgba(91, 101, 112, 0.34);
+  border-radius: 22px;
+  background: rgba(91, 101, 112, 0.12);
+  transition: transform 120ms ease;
+}
+
 body.nav-body[data-layout="icons"] .nav-tile-head,
 body.nav-body[data-layout="simple"] .nav-tile-head {
   flex-direction: column;
