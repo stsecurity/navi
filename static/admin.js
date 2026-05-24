@@ -487,6 +487,7 @@ function renderLinks() {
   });
 
   if (!filtered.length) {
+    linkList.sortableCleanup?.();
     linkList.innerHTML = `<div class="empty-state">No links match your search yet.</div>`;
     return;
   }
@@ -494,7 +495,7 @@ function renderLinks() {
   linkList.innerHTML = filtered
     .map(
       (link) => `
-        <article class="link-card ${document.getElementById("link-id").value === String(link.id) ? "editing" : ""}">
+        <article class="link-card ${document.getElementById("link-id").value === String(link.id) ? "editing" : ""}" data-link-id="${link.id}">
           <div class="card-title-row">
             <div class="tile-icon-wrap small">
               <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" data-fallback="${escapeAttribute(initials(link.title))}" />
@@ -517,6 +518,15 @@ function renderLinks() {
     .join("");
 
   bindIconFallbacks(linkList);
+  enableLinkSorting({
+    container: linkList,
+    itemSelector: ".link-card[data-link-id]",
+    onSort: saveVisibleLinkOrder,
+    onSortError: () => {
+      dashboardMessage.textContent = "Could not save the new link order. Please try again.";
+      renderLinks();
+    },
+  });
 
   linkList.querySelectorAll("button[data-action='edit']").forEach((button) => {
     button.addEventListener("click", () => startEdit(Number(button.dataset.id)));
@@ -560,6 +570,29 @@ function renderLinks() {
       await loadLinks();
     });
   });
+}
+
+async function saveVisibleLinkOrder(visibleIds) {
+  const nextLinks = mergeVisibleOrder(visibleIds);
+  state.links = nextLinks;
+  const result = await api("/api/links/reorder", "PUT", {
+    ids: state.links.map((link) => link.id),
+  });
+  if (!result.ok) {
+    throw new Error(result.error || "Order save failed.");
+  }
+  state.links = result.links || state.links;
+  dashboardMessage.textContent = "Link order saved.";
+  renderLinks();
+}
+
+function mergeVisibleOrder(visibleIds) {
+  const visibleSet = new Set(visibleIds);
+  const orderedVisibleLinks = visibleIds
+    .map((id) => state.links.find((link) => link.id === id))
+    .filter(Boolean);
+  let visibleIndex = 0;
+  return state.links.map((link) => (visibleSet.has(link.id) ? orderedVisibleLinks[visibleIndex++] : link));
 }
 
 function startEdit(id) {

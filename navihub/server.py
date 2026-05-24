@@ -691,6 +691,8 @@ class NaviHubApp:
                 result = self.list_oauth_providers(environ)
             elif path == "/api/links/import" and method == "POST":
                 result = self.import_links(environ)
+            elif path == "/api/links/reorder" and method == "PUT":
+                result = self.reorder_links(environ)
             elif path == "/api/links" and method == "POST":
                 result = self.create_link(environ)
             elif path.startswith("/api/links/") and method == "PUT":
@@ -1446,6 +1448,48 @@ class NaviHubApp:
         if icon_mode == "favicon":
             self.warm_favicon_async(icon_url)
         return response
+
+    def reorder_links(self, environ):
+        user = self.require_user(environ)
+        payload = parse_json_body(environ)
+        ids = payload.get("ids")
+        if not isinstance(ids, list) or not ids:
+            raise ValueError("Link order must be a non-empty list.")
+        try:
+            ordered_ids = [int(link_id) for link_id in ids]
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Link order contains an invalid id.") from exc
+        if len(set(ordered_ids)) != len(ordered_ids):
+            raise ValueError("Link order contains duplicate ids.")
+
+        with self.connect() as conn:
+            existing_ids = [
+                row["id"]
+                for row in conn.execute(
+                    "SELECT id FROM links WHERE user_id = ? ORDER BY position ASC, id ASC",
+                    (user["id"],),
+                ).fetchall()
+            ]
+            if set(existing_ids) != set(ordered_ids):
+                raise ValueError("Link order must include every saved link.")
+            for position, link_id in enumerate(ordered_ids, start=1):
+                conn.execute(
+                    "UPDATE links SET position = ? WHERE id = ? AND user_id = ?",
+                    (position, link_id, user["id"]),
+                )
+            rows = conn.execute(
+                """
+                SELECT id, title, url, description, icon_url, icon_mode, position
+                FROM links
+                WHERE user_id = ?
+                ORDER BY position ASC, id ASC
+                """,
+                (user["id"],),
+            ).fetchall()
+        return json_response(
+            HTTPStatus.OK,
+            {"links": [self.serialize_link(dict(row)) for row in rows]},
+        )
 
     def delete_link(self, environ, path):
         user = self.require_user(environ)

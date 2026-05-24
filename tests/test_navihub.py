@@ -263,6 +263,14 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertEqual(updated["status"], "200 OK")
         self.assertEqual(updated["json"]["link"]["title"], "Codex App")
 
+        ordered_ids = [link["id"] for link in self.request("GET", "/api/links")["json"]["links"]]
+        reordered = self.request("PUT", "/api/links/reorder", {"ids": list(reversed(ordered_ids))})
+        self.assertEqual(reordered["status"], "200 OK")
+        self.assertEqual([link["id"] for link in reordered["json"]["links"]], list(reversed(ordered_ids)))
+
+        saved_order = self.request("GET", "/api/links")
+        self.assertEqual([link["id"] for link in saved_order["json"]["links"]], list(reversed(ordered_ids)))
+
     def test_user_can_choose_icon_grid_layout(self):
         register = self.request(
             "POST",

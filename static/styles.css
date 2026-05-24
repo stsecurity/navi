@@ -783,6 +783,8 @@ body[data-theme="night"] .bookmark-row {
 .link-card {
   display: grid;
   gap: 12px;
+  cursor: grab;
+  transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
 }
 
 .link-card-url {
@@ -930,6 +932,7 @@ body[data-theme="night"] .bookmark-row {
   color: var(--text);
   text-decoration: none;
   box-shadow: var(--tile-shadow);
+  cursor: grab;
   transition: transform 180ms ease, box-shadow 180ms ease;
 }
 
@@ -1012,6 +1015,20 @@ body.nav-body[data-layout="icons"] .nav-tile:hover,
 body.nav-body[data-layout="simple"] .nav-tile:hover {
   transform: translateY(-2px);
   box-shadow: none;
+}
+
+.link-card.is-dragging,
+.nav-tile.is-dragging {
+  cursor: grabbing;
+  opacity: 0.92;
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 28px 70px rgba(73, 54, 33, 0.2);
+  z-index: 5;
+}
+
+.is-sorting .link-card,
+.is-sorting .nav-tile {
+  user-select: none;
 }
 
 body.nav-body[data-layout="icons"] .nav-tile-head,

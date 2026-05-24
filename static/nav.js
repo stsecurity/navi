@@ -54,6 +54,7 @@ function renderLinks() {
     : "No links match your search yet.";
 
   if (!filtered.length) {
+    tileGrid.sortableCleanup?.();
     tileGrid.innerHTML = `<div class="empty-state">Add or edit links from the backend page, then they will show up here.</div>`;
     return;
   }
@@ -61,7 +62,7 @@ function renderLinks() {
   tileGrid.innerHTML = filtered
     .map(
       (link) => `
-        <a class="nav-tile" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer">
+        <a class="nav-tile" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-link-id="${link.id}">
           <div class="nav-tile-head">
             <div class="tile-icon-wrap">
               <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" />
@@ -79,6 +80,38 @@ function renderLinks() {
     .join("");
 
   bindIconFallbacks(tileGrid);
+  enableLinkSorting({
+    container: tileGrid,
+    itemSelector: ".nav-tile[data-link-id]",
+    onSort: saveVisibleLinkOrder,
+    onSortError: () => {
+      navMessage.textContent = "Could not save the new order. Please try again.";
+      renderLinks();
+    },
+  });
+}
+
+async function saveVisibleLinkOrder(visibleIds) {
+  const nextLinks = mergeVisibleOrder(visibleIds);
+  state.links = nextLinks;
+  const result = await api("/api/links/reorder", "PUT", {
+    ids: state.links.map((link) => link.id),
+  });
+  if (!result.ok) {
+    throw new Error(result.error || "Order save failed.");
+  }
+  state.links = result.links || state.links;
+  navMessage.textContent = "Link order saved.";
+  renderLinks();
+}
+
+function mergeVisibleOrder(visibleIds) {
+  const visibleSet = new Set(visibleIds);
+  const orderedVisibleLinks = visibleIds
+    .map((id) => state.links.find((link) => link.id === id))
+    .filter(Boolean);
+  let visibleIndex = 0;
+  return state.links.map((link) => (visibleSet.has(link.id) ? orderedVisibleLinks[visibleIndex++] : link));
 }
 
 function applySettings(settings, siteTitle, faviconUrl) {
