@@ -263,6 +263,35 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertEqual(updated["status"], "200 OK")
         self.assertEqual(updated["json"]["link"]["title"], "Codex App")
 
+    def test_user_can_choose_icon_grid_layout(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
+
+        update_settings = self.request(
+            "PUT",
+            "/api/user-settings",
+            {
+                "theme": "day",
+                "accent": "amber",
+                "layout": "icons",
+                "background": "sunrise",
+                "tab_title": "Icon Board",
+                "admin_heading": "NaviHub",
+                "admin_copy": "Personal navigation page",
+                "nav_heading": "Launchpad",
+                "nav_copy": "Icon-first navigation.",
+            },
+        )
+        self.assertEqual(update_settings["status"], "200 OK")
+        self.assertEqual(update_settings["json"]["settings"]["layout"], "icons")
+
+        navigation = self.request("GET", "/")
+        self.assertIn('data-layout="icons"', navigation["text"])
+
     def test_user_can_import_bookmarks_and_duplicates_are_skipped(self):
         register = self.request(
             "POST",

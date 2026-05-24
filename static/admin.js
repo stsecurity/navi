@@ -947,7 +947,7 @@ function updateLayoutPreview(selectId, previewId) {
     return;
   }
   const layout = document.getElementById(selectId).value;
-  const cardCount = layout === "compact" ? 4 : 3;
+  const cardCount = layout === "cozy" ? 3 : 4;
   preview.dataset.layout = layout;
   preview.innerHTML = Array.from({ length: cardCount }, () => "<span></span>").join("");
 }

@@ -53,7 +53,7 @@ DEFAULT_LINKS = [
 ]
 ALLOWED_THEMES = {"day", "night"}
 ALLOWED_ACCENTS = {"amber", "cyan", "pink"}
-ALLOWED_LAYOUTS = {"cozy", "compact"}
+ALLOWED_LAYOUTS = {"cozy", "compact", "icons"}
 ALLOWED_BACKGROUNDS = {"sunrise", "paper", "aurora", "midnight", "custom"}
 THEME_BACKGROUNDS = {
     "day": {"sunrise", "paper", "aurora", "custom"},
