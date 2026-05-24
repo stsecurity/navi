@@ -435,6 +435,10 @@ textarea {
   grid-template-columns: repeat(4, 1fr);
 }
 
+.layout-preview[data-layout="simple"] {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 body[data-theme="night"] .layout-preview {
   background: rgba(15, 23, 36, 0.42);
 }
@@ -464,6 +468,14 @@ body[data-theme="night"] .layout-preview {
   background:
     radial-gradient(circle at 50% 13px, var(--accent) 0 8px, transparent 9px),
     linear-gradient(var(--text), var(--text)) 50% 31px / 68% 4px no-repeat,
+    transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.layout-preview[data-layout="simple"] span {
+  background:
+    radial-gradient(circle at 50% 50%, var(--accent) 0 10px, transparent 11px),
     transparent;
   border-color: transparent;
   box-shadow: none;
@@ -973,13 +985,15 @@ body.nav-body[data-layout="compact"] .nav-tile > span {
   display: none;
 }
 
-body.nav-body[data-layout="icons"] .tile-grid {
+body.nav-body[data-layout="icons"] .tile-grid,
+body.nav-body[data-layout="simple"] .tile-grid {
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
   gap: 42px 24px;
   align-items: start;
 }
 
-body.nav-body[data-layout="icons"] .nav-tile {
+body.nav-body[data-layout="icons"] .nav-tile,
+body.nav-body[data-layout="simple"] .nav-tile {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -993,19 +1007,22 @@ body.nav-body[data-layout="icons"] .nav-tile {
   text-align: center;
 }
 
-body.nav-body[data-layout="icons"] .nav-tile:hover {
+body.nav-body[data-layout="icons"] .nav-tile:hover,
+body.nav-body[data-layout="simple"] .nav-tile:hover {
   transform: translateY(-2px);
   box-shadow: none;
 }
 
-body.nav-body[data-layout="icons"] .nav-tile-head {
+body.nav-body[data-layout="icons"] .nav-tile-head,
+body.nav-body[data-layout="simple"] .nav-tile-head {
   flex-direction: column;
   align-items: center;
   gap: 10px;
   width: 100%;
 }
 
-body.nav-body[data-layout="icons"] .tile-icon-wrap {
+body.nav-body[data-layout="icons"] .tile-icon-wrap,
+body.nav-body[data-layout="simple"] .tile-icon-wrap {
   width: 96px;
   height: 96px;
   border-radius: 22px;
@@ -1013,16 +1030,19 @@ body.nav-body[data-layout="icons"] .tile-icon-wrap {
   box-shadow: 0 12px 28px rgba(73, 54, 33, 0.08);
 }
 
-body.nav-body[data-layout="icons"] .tile-icon-image {
+body.nav-body[data-layout="icons"] .tile-icon-image,
+body.nav-body[data-layout="simple"] .tile-icon-image {
   object-fit: contain;
   padding: 16px;
 }
 
-body.nav-body[data-layout="icons"] .tile-icon-fallback {
+body.nav-body[data-layout="icons"] .tile-icon-fallback,
+body.nav-body[data-layout="simple"] .tile-icon-fallback {
   font-size: 2rem;
 }
 
-body.nav-body[data-layout="icons"] .nav-tile h2 {
+body.nav-body[data-layout="icons"] .nav-tile h2,
+body.nav-body[data-layout="simple"] .nav-tile h2 {
   max-width: 120px;
   color: var(--text);
   font-family: var(--font-body);
@@ -1033,7 +1053,17 @@ body.nav-body[data-layout="icons"] .nav-tile h2 {
 }
 
 body.nav-body[data-layout="icons"] .nav-tile p,
-body.nav-body[data-layout="icons"] .nav-tile > span {
+body.nav-body[data-layout="icons"] .nav-tile > span,
+body.nav-body[data-layout="simple"] .nav-tile p,
+body.nav-body[data-layout="simple"] .nav-tile > span {
+  display: none;
+}
+
+body.nav-body[data-layout="simple"] .tile-grid {
+  gap: 34px 24px;
+}
+
+body.nav-body[data-layout="simple"] .nav-tile h2 {
   display: none;
 }
 
@@ -1093,7 +1123,8 @@ body.nav-body[data-layout="icons"] .nav-tile > span {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  body.nav-body[data-layout="icons"] .tile-grid {
+  body.nav-body[data-layout="icons"] .tile-grid,
+  body.nav-body[data-layout="simple"] .tile-grid {
     grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
     gap: 34px 18px;
   }
@@ -1119,17 +1150,20 @@ body.nav-body[data-layout="icons"] .nav-tile > span {
     grid-template-columns: 1fr;
   }
 
-  body.nav-body[data-layout="icons"] .tile-grid {
+  body.nav-body[data-layout="icons"] .tile-grid,
+  body.nav-body[data-layout="simple"] .tile-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  body.nav-body[data-layout="icons"] .tile-icon-wrap {
+  body.nav-body[data-layout="icons"] .tile-icon-wrap,
+  body.nav-body[data-layout="simple"] .tile-icon-wrap {
     width: 82px;
     height: 82px;
     border-radius: 20px;
   }
 
-  body.nav-body[data-layout="icons"] .nav-tile h2 {
+  body.nav-body[data-layout="icons"] .nav-tile h2,
+  body.nav-body[data-layout="simple"] .nav-tile h2 {
     max-width: 96px;
     font-size: 0.94rem;
   }

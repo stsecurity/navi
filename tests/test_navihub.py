@@ -292,6 +292,35 @@ class NaviHubAppTests(unittest.TestCase):
         navigation = self.request("GET", "/")
         self.assertIn('data-layout="icons"', navigation["text"])
 
+    def test_user_can_choose_simple_icon_only_layout(self):
+        register = self.request(
+            "POST",
+            "/api/register",
+            {"email": "owner@example.com", "password": "Strongpass1"},
+        )
+        self.cookie = register["headers"]["Set-Cookie"].split(";", 1)[0]
+
+        update_settings = self.request(
+            "PUT",
+            "/api/user-settings",
+            {
+                "theme": "day",
+                "accent": "amber",
+                "layout": "simple",
+                "background": "sunrise",
+                "tab_title": "Simple Board",
+                "admin_heading": "NaviHub",
+                "admin_copy": "Personal navigation page",
+                "nav_heading": "Launchpad",
+                "nav_copy": "Icon-only navigation.",
+            },
+        )
+        self.assertEqual(update_settings["status"], "200 OK")
+        self.assertEqual(update_settings["json"]["settings"]["layout"], "simple")
+
+        navigation = self.request("GET", "/")
+        self.assertIn('data-layout="simple"', navigation["text"])
+
     def test_user_can_import_bookmarks_and_duplicates_are_skipped(self):
         register = self.request(
             "POST",
