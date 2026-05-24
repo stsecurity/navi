@@ -808,6 +808,7 @@ body[data-theme="night"] .bookmark-row {
 }
 
 .tile-icon-wrap {
+  position: relative;
   width: 54px;
   height: 54px;
   border-radius: 16px;
@@ -844,6 +845,18 @@ body[data-theme="night"] .bookmark-row {
 
 .tile-icon-fallback.visible {
   display: flex;
+}
+
+.tile-icon-drag-cover {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  cursor: grab;
+}
+
+.tile-icon-fallback.visible + .tile-icon-drag-cover {
+  display: block;
 }
 
 .card-actions {
@@ -982,6 +995,9 @@ body.nav-body[data-layout="compact"] .tile-icon-wrap {
 body.nav-body[data-layout="compact"] .nav-tile h2 {
   font-size: 1.18rem;
   line-height: 1.18;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.nav-body[data-layout="compact"] .nav-tile p,
@@ -1068,13 +1084,16 @@ body.nav-body[data-layout="simple"] .tile-icon-fallback {
 
 body.nav-body[data-layout="icons"] .nav-tile h2,
 body.nav-body[data-layout="simple"] .nav-tile h2 {
+  width: 100%;
   max-width: 120px;
   color: var(--text);
   font-family: var(--font-body);
   font-size: 1.02rem;
   font-weight: 500;
   line-height: 1.25;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 body.nav-body[data-layout="icons"] .nav-tile p,
