@@ -23,6 +23,7 @@ function enableLinkSorting(options) {
     item.style.zIndex = "";
     item.style.margin = "";
     item.style.transform = "";
+    item.style.transition = "";
     item.style.willChange = "";
   };
 
@@ -132,7 +133,8 @@ function enableLinkSorting(options) {
   const updateFloatingItem = (event) => {
     drag.lastX = event.clientX;
     drag.lastY = event.clientY;
-    drag.item.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
+    drag.item.style.left = `${event.clientX - drag.offsetX}px`;
+    drag.item.style.top = `${event.clientY - drag.offsetY}px`;
   };
 
   const commitPlaceholder = () => {
@@ -182,12 +184,13 @@ function enableLinkSorting(options) {
     drag.item.style.width = `${rect.width}px`;
     drag.item.style.height = `${rect.height}px`;
     drag.item.style.position = "fixed";
-    drag.item.style.left = "0";
-    drag.item.style.top = "0";
+    drag.item.style.left = `${rect.left}px`;
+    drag.item.style.top = `${rect.top}px`;
     drag.item.style.margin = "0";
     drag.item.style.pointerEvents = "none";
     drag.item.style.zIndex = "20";
-    drag.item.style.willChange = "transform";
+    drag.item.style.transition = "none";
+    drag.item.style.willChange = "left, top";
     container.classList.add("is-sorting");
     updateFloatingItem(event);
     drag.slotTimer = window.setInterval(updatePlaceholder, 90);
