@@ -62,20 +62,21 @@ function renderLinks() {
   tileGrid.innerHTML = filtered
     .map(
       (link) => `
-        <a class="nav-tile" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" data-link-id="${link.id}">
-          <div class="nav-tile-head">
-            <div class="tile-icon-wrap">
-              <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" />
-              <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
-              <span class="tile-icon-drag-cover" aria-hidden="true"></span>
+        <div class="nav-tile" data-link-id="${link.id}">
+          <a class="nav-tile-link" href="${escapeAttribute(link.url)}" target="_blank" rel="noreferrer" draggable="false">
+            <div class="nav-tile-head">
+              <div class="tile-icon-wrap">
+                <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" />
+                <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
+              </div>
+              <div>
+                <h2>${escapeHtml(link.title)}</h2>
+              </div>
             </div>
-            <div>
-              <h2>${escapeHtml(link.title)}</h2>
-            </div>
-          </div>
-          <p>${escapeHtml(link.description || "Open this link.")}</p>
-          <span>${escapeHtml(link.url)}</span>
-        </a>
+            <p>${escapeHtml(link.description || "Open this link.")}</p>
+            <span>${escapeHtml(link.url)}</span>
+          </a>
+        </div>
       `
     )
     .join("");

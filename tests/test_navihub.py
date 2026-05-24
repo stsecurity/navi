@@ -48,6 +48,12 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertEqual(admin["status"], "200 OK")
         self.assertIn("Personal Settings", admin["text"])
 
+    def test_navigation_tiles_keep_sortable_card_separate_from_link(self):
+        nav_script = (BASE_DIR / "static" / "nav.js").read_text(encoding="utf-8")
+        self.assertIn('<div class="nav-tile" data-link-id="${link.id}">', nav_script)
+        self.assertIn('class="nav-tile-link"', nav_script)
+        self.assertIn('draggable="false"', nav_script)
+
     def test_login_page_uses_site_default_theme_before_javascript_loads(self):
         register = self.request(
             "POST",

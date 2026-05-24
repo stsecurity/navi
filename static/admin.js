@@ -500,7 +500,6 @@ function renderLinks() {
             <div class="tile-icon-wrap small">
               <img class="tile-icon-image" src="${escapeAttribute(link.icon_url || "")}" alt="" data-fallback="${escapeAttribute(initials(link.title))}" />
               <span class="tile-icon-fallback">${escapeHtml(initials(link.title))}</span>
-              <span class="tile-icon-drag-cover" aria-hidden="true"></span>
             </div>
             <div>
               <h3>${escapeHtml(link.title)}</h3>
