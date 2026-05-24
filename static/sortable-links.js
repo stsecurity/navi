@@ -25,6 +25,7 @@ function enableLinkSorting(options) {
     item.style.transform = "";
     item.style.transition = "";
     item.style.willChange = "";
+    item.style.boxSizing = "";
   };
 
   const clearDrag = () => {
@@ -33,6 +34,9 @@ function enableLinkSorting(options) {
     }
     window.clearInterval(drag.slotTimer);
     drag.item.classList.remove("is-dragging");
+    if (drag.placeholder && drag.returnParent && drag.item.parentElement !== drag.returnParent) {
+      drag.returnParent.insertBefore(drag.item, drag.placeholder);
+    }
     clearDragStyles(drag.item);
     drag.placeholder?.remove();
     container.classList.remove("is-sorting");
@@ -175,6 +179,7 @@ function enableLinkSorting(options) {
     container.insertBefore(placeholder, drag.item);
 
     drag.placeholder = placeholder;
+    drag.returnParent = drag.item.parentElement;
     drag.offsetX = event.clientX - rect.left;
     drag.offsetY = event.clientY - rect.top;
     drag.lastX = event.clientX;
@@ -189,8 +194,10 @@ function enableLinkSorting(options) {
     drag.item.style.margin = "0";
     drag.item.style.pointerEvents = "none";
     drag.item.style.zIndex = "20";
+    drag.item.style.boxSizing = "border-box";
     drag.item.style.transition = "none";
     drag.item.style.willChange = "left, top";
+    document.body.appendChild(drag.item);
     container.classList.add("is-sorting");
     updateFloatingItem(event);
     drag.slotTimer = window.setInterval(updatePlaceholder, 90);
@@ -211,6 +218,7 @@ function enableLinkSorting(options) {
       startY: event.clientY,
       active: false,
       placeholder: null,
+      returnParent: null,
       slotTimer: null,
       pendingReference: null,
       pendingCount: 0,
@@ -248,7 +256,7 @@ function enableLinkSorting(options) {
     commitPlaceholder();
     const placeholder = drag.placeholder;
     const draggedItem = drag.item;
-    container.insertBefore(draggedItem, placeholder);
+    drag.returnParent.insertBefore(draggedItem, placeholder);
     placeholder.remove();
     draggedItem.classList.remove("is-dragging");
     clearDragStyles(draggedItem);
