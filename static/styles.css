@@ -936,6 +936,7 @@ body[data-theme="night"] .bookmark-row {
   box-shadow: var(--tile-shadow);
   cursor: grab;
   transition: transform 180ms ease, box-shadow 180ms ease;
+  user-select: none;
 }
 
 .nav-tile-link {
@@ -949,6 +950,7 @@ body[data-theme="night"] .bookmark-row {
   color: inherit;
   text-decoration: none;
   -webkit-user-drag: none;
+  user-select: none;
 }
 
 body[data-theme="night"] .nav-tile {
