@@ -23,6 +23,7 @@ function enableLinkSorting(options) {
     item.style.zIndex = "";
     item.style.margin = "";
     item.style.transform = "";
+    item.style.willChange = "";
   };
 
   const clearDrag = () => {
@@ -70,48 +71,97 @@ function enableLinkSorting(options) {
     });
   };
 
-  const closestSlot = (x, y) => {
-    let closest = null;
-    let closestDistance = Number.POSITIVE_INFINITY;
-    sortableItems().forEach((item) => {
-      if (item === drag.item) {
-        return;
-      }
-      const rect = item.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
-      const distance = Math.hypot(x - centerX, y - centerY);
-      if (distance < closestDistance) {
-        closestDistance = distance;
-        closest = { item, rect, centerX, centerY };
+  const nextSortableAfter = (item) => {
+    let next = item.nextElementSibling;
+    while (next && (next === drag.item || next === drag.placeholder)) {
+      next = next.nextElementSibling;
+    }
+    return next;
+  };
+
+  const dropReference = (x, y) => {
+    const entries = sortableItems()
+      .filter((item) => item !== drag.item)
+      .map((item) => {
+        const rect = item.getBoundingClientRect();
+        return {
+          item,
+          rect,
+          centerX: rect.left + rect.width / 2,
+          centerY: rect.top + rect.height / 2,
+        };
+      })
+      .sort((a, b) => a.centerY - b.centerY || a.centerX - b.centerX);
+
+    if (!entries.length) {
+      return null;
+    }
+
+    const rows = [];
+    entries.forEach((entry) => {
+      const row = rows.find((candidate) => Math.abs(candidate.centerY - entry.centerY) < Math.max(24, entry.rect.height * 0.45));
+      if (row) {
+        row.items.push(entry);
+        row.centerY = row.items.reduce((sum, item) => sum + item.centerY, 0) / row.items.length;
+        row.top = Math.min(row.top, entry.rect.top);
+        row.bottom = Math.max(row.bottom, entry.rect.bottom);
+      } else {
+        rows.push({
+          centerY: entry.centerY,
+          top: entry.rect.top,
+          bottom: entry.rect.bottom,
+          items: [entry],
+        });
       }
     });
-    return closest;
+
+    let row = rows.find((candidate) => y >= candidate.top - 10 && y <= candidate.bottom + 10);
+    if (!row) {
+      row = rows.reduce((closest, candidate) => (Math.abs(y - candidate.centerY) < Math.abs(y - closest.centerY) ? candidate : closest), rows[0]);
+    }
+
+    row.items.sort((a, b) => a.centerX - b.centerX);
+    for (const entry of row.items) {
+      if (x < entry.centerX) {
+        return entry.item;
+      }
+    }
+    return nextSortableAfter(row.items[row.items.length - 1].item);
   };
 
   const updateFloatingItem = (event) => {
     drag.lastX = event.clientX;
     drag.lastY = event.clientY;
-    drag.item.style.left = `${event.clientX - drag.offsetX}px`;
-    drag.item.style.top = `${event.clientY - drag.offsetY}px`;
+    drag.item.style.transform = `translate3d(${event.clientX - drag.offsetX}px, ${event.clientY - drag.offsetY}px, 0)`;
   };
 
-  const updatePlaceholder = () => {
+  const commitPlaceholder = () => {
     if (!drag?.active) {
       return;
     }
-    const slot = closestSlot(drag.lastX, drag.lastY);
-    if (!slot) {
-      return;
-    }
-    const before = drag.lastY < slot.centerY || (Math.abs(drag.lastY - slot.centerY) < slot.rect.height / 3 && drag.lastX < slot.centerX);
-    const next = before ? slot.item : slot.item.nextElementSibling;
+    const next = drag.pendingReference;
     if (next === drag.placeholder || next === drag.item) {
       return;
     }
     animateReflow(() => {
       container.insertBefore(drag.placeholder, next);
     });
+  };
+
+  const updatePlaceholder = () => {
+    if (!drag?.active) {
+      return;
+    }
+    const next = dropReference(drag.lastX, drag.lastY);
+    if (next === drag.pendingReference) {
+      drag.pendingCount += 1;
+    } else {
+      drag.pendingReference = next;
+      drag.pendingCount = 1;
+    }
+    if (drag.pendingCount >= 2) {
+      commitPlaceholder();
+    }
   };
 
   const startDrag = (event) => {
@@ -132,12 +182,14 @@ function enableLinkSorting(options) {
     drag.item.style.width = `${rect.width}px`;
     drag.item.style.height = `${rect.height}px`;
     drag.item.style.position = "fixed";
-    drag.item.style.left = `${rect.left}px`;
-    drag.item.style.top = `${rect.top}px`;
+    drag.item.style.left = "0";
+    drag.item.style.top = "0";
     drag.item.style.margin = "0";
     drag.item.style.pointerEvents = "none";
     drag.item.style.zIndex = "20";
+    drag.item.style.willChange = "transform";
     container.classList.add("is-sorting");
+    updateFloatingItem(event);
     drag.slotTimer = window.setInterval(updatePlaceholder, 90);
   };
 
@@ -157,6 +209,8 @@ function enableLinkSorting(options) {
       active: false,
       placeholder: null,
       slotTimer: null,
+      pendingReference: null,
+      pendingCount: 0,
     };
     item.setPointerCapture?.(event.pointerId);
   };
@@ -187,7 +241,8 @@ function enableLinkSorting(options) {
       return;
     }
     window.clearInterval(drag.slotTimer);
-    updatePlaceholder();
+    drag.pendingReference = dropReference(drag.lastX, drag.lastY);
+    commitPlaceholder();
     const placeholder = drag.placeholder;
     const draggedItem = drag.item;
     container.insertBefore(draggedItem, placeholder);

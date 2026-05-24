@@ -1021,7 +1021,6 @@ body.nav-body[data-layout="simple"] .nav-tile:hover {
 .nav-tile.is-dragging {
   cursor: grabbing;
   opacity: 0.92;
-  transform: translateY(-8px) scale(1.02);
   box-shadow: 0 28px 70px rgba(73, 54, 33, 0.2);
   z-index: 5;
 }
