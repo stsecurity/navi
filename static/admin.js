@@ -583,7 +583,6 @@ async function saveVisibleLinkOrder(visibleIds) {
   }
   state.links = result.links || state.links;
   dashboardMessage.textContent = "Link order saved.";
-  renderLinks();
 }
 
 function mergeVisibleOrder(visibleIds) {
