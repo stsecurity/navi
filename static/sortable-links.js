@@ -9,7 +9,6 @@ function enableLinkSorting(options) {
 
   let drag = null;
   let suppressClick = false;
-  const dragStartDistance = 4;
 
   const sortableItems = () => Array.from(container.querySelectorAll(itemSelector));
   const orderedIds = () => sortableItems().map((item) => Number(item.dataset.linkId)).filter(Number.isFinite);
@@ -232,7 +231,7 @@ function enableLinkSorting(options) {
       return;
     }
     const distance = Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY);
-    if (!drag.active && distance < dragStartDistance) {
+    if (!drag.active && distance < 6) {
       return;
     }
     if (!drag.active) {
@@ -298,31 +297,15 @@ function enableLinkSorting(options) {
     event.preventDefault();
   };
 
-  const onPageHidden = () => {
-    clearDrag();
-  };
-
-  const onVisibilityChange = () => {
-    if (document.visibilityState === "hidden") {
-      clearDrag();
-    }
-  };
-
   container.addEventListener("pointerdown", onPointerDown);
   container.addEventListener("pointermove", onPointerMove);
   container.addEventListener("pointerup", finishSort);
   container.addEventListener("pointercancel", cancelSort);
   container.addEventListener("click", onClick, true);
   container.addEventListener("dragstart", onDragStart);
-  window.addEventListener("pagehide", onPageHidden);
-  window.addEventListener("blur", onPageHidden);
-  document.addEventListener("visibilitychange", onVisibilityChange);
 
   sortableItems().forEach((item) => {
     item.draggable = false;
-    item.querySelectorAll("img").forEach((img) => {
-      img.draggable = false;
-    });
   });
 
   container.sortableCleanup = () => {
@@ -332,9 +315,6 @@ function enableLinkSorting(options) {
     container.removeEventListener("pointercancel", cancelSort);
     container.removeEventListener("click", onClick, true);
     container.removeEventListener("dragstart", onDragStart);
-    window.removeEventListener("pagehide", onPageHidden);
-    window.removeEventListener("blur", onPageHidden);
-    document.removeEventListener("visibilitychange", onVisibilityChange);
     clearDrag();
     delete container.sortableCleanup;
   };
