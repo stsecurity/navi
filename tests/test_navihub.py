@@ -54,6 +54,12 @@ class NaviHubAppTests(unittest.TestCase):
         self.assertIn('class="nav-tile-link"', nav_script)
         self.assertIn('draggable="false"', nav_script)
 
+    def test_navigation_layout_limits_card_columns_and_titles(self):
+        styles = (BASE_DIR / "static" / "styles.css").read_text(encoding="utf-8")
+        self.assertIn(".tile-grid {\n  grid-template-columns: repeat(3, minmax(0, 1fr));", styles)
+        self.assertIn("-webkit-line-clamp: 2;", styles)
+        self.assertIn('body.nav-body[data-layout="compact"] .nav-tile h2', styles)
+
     def test_login_page_uses_site_default_theme_before_javascript_loads(self):
         register = self.request(
             "POST",
