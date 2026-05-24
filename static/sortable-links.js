@@ -10,6 +10,7 @@ function enableLinkSorting(options) {
   let drag = null;
   let suppressClick = false;
   const dragStartDistance = 4;
+  const placeholderExtraHeight = 12;
 
   const sortableItems = () => Array.from(container.querySelectorAll(itemSelector));
   const orderedIds = () => sortableItems().map((item) => Number(item.dataset.linkId)).filter(Number.isFinite);
@@ -176,7 +177,7 @@ function enableLinkSorting(options) {
     const placeholder = document.createElement("div");
     placeholder.className = "sort-placeholder";
     placeholder.style.width = `${rect.width}px`;
-    placeholder.style.height = `${rect.height}px`;
+    placeholder.style.height = `${rect.height + placeholderExtraHeight}px`;
     container.insertBefore(placeholder, drag.item);
 
     drag.placeholder = placeholder;
@@ -315,7 +316,6 @@ function enableLinkSorting(options) {
   container.addEventListener("click", onClick, true);
   container.addEventListener("dragstart", onDragStart);
   window.addEventListener("pagehide", onPageHidden);
-  window.addEventListener("blur", onPageHidden);
   document.addEventListener("visibilitychange", onVisibilityChange);
 
   sortableItems().forEach((item) => {
@@ -333,7 +333,6 @@ function enableLinkSorting(options) {
     container.removeEventListener("click", onClick, true);
     container.removeEventListener("dragstart", onDragStart);
     window.removeEventListener("pagehide", onPageHidden);
-    window.removeEventListener("blur", onPageHidden);
     document.removeEventListener("visibilitychange", onVisibilityChange);
     clearDrag();
     delete container.sortableCleanup;
